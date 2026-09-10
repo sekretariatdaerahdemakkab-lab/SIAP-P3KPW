@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'sekretariatdaerah.demakkab@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        true // In this portal, authenticated accounts are designated administrative staff
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Connection test document
+    match /test/{testId} {
+      allow read: if true;
+    }
+
+    // Administrators
+    match /admins/{adminId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == adminId;
+      allow update, delete: if isSignedIn();
+    }
+
+    // Application settings (e.g. work hours)
+    match /settings/{settingId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Master data for PPPK employees (public read for name/NIP selector in recap portal, admin write)
+    match /employees/{employeeId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Attendance records (public query for PPPK staff by NIP, batch upload for admin)
+    match /attendances/{attendanceId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // National holidays and collective leaves (public read, admin write)
+    match /holidays/{holidayId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+  }
+}

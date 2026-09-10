@@ -1,0 +1,6 @@
+{
+  "name": "SIAP PPPK Paruh Waktu Setda Demak",
+  "description": "Sistem Informasi Presensi dan Pengaturan Jam Kerja PPPK Paruh Waktu Sekretariat Daerah Kabupaten Demak",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

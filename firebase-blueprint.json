@@ -1,0 +1,152 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrator account metadata",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Admin email address"
+        },
+        "role": {
+          "type": "string",
+          "description": "User role in system"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp of account registration"
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "WorkHours": {
+      "title": "WorkHours",
+      "description": "Office work hours presets and tolerance configuration",
+      "type": "object",
+      "properties": {
+        "active_id": {
+          "type": "string",
+          "description": "ID of currently active work schedule"
+        },
+        "jam_masuk": {
+          "type": "string",
+          "description": "Standard check-in time HH:mm of active schedule"
+        },
+        "jam_pulang": {
+          "type": "string",
+          "description": "Standard check-out time HH:mm of active schedule"
+        },
+        "toleransi_menit": {
+          "type": "number",
+          "description": "Late tolerance in minutes of active schedule"
+        },
+        "schedules": {
+          "type": "array",
+          "description": "List of available work schedule profiles"
+        }
+      },
+      "required": ["jam_masuk", "jam_pulang", "toleransi_menit"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Master data for PPPK Paruh Waktu employees",
+      "type": "object",
+      "properties": {
+        "nama": {
+          "type": "string",
+          "description": "Full name of employee"
+        },
+        "jabatan": {
+          "type": "string",
+          "description": "Official title or position"
+        },
+        "unit_kerja": {
+          "type": "string",
+          "description": "Work unit or section"
+        }
+      },
+      "required": ["nama", "jabatan", "unit_kerja"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily attendance record per employee",
+      "type": "object",
+      "properties": {
+        "nip": {
+          "type": "string",
+          "description": "Employee identification number (NIP)"
+        },
+        "tanggal": {
+          "type": "string",
+          "description": "Date of attendance YYYY-MM-DD"
+        },
+        "waktu_masuk": {
+          "type": "string",
+          "description": "Check-in time"
+        },
+        "waktu_keluar": {
+          "type": "string",
+          "description": "Check-out time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Attendance status"
+        },
+        "total_jam": {
+          "type": "number",
+          "description": "Total effective work hours"
+        }
+      },
+      "required": ["nip", "tanggal"]
+    },
+    "Holiday": {
+      "title": "Holiday",
+      "description": "National holidays and collective leaves (Cuti Bersama)",
+      "type": "object",
+      "properties": {
+        "tanggal": {
+          "type": "string",
+          "description": "Holiday date YYYY-MM-DD"
+        },
+        "nama": {
+          "type": "string",
+          "description": "Name or title of holiday"
+        },
+        "jenis": {
+          "type": "string",
+          "enum": ["libur_nasional", "cuti_bersama"],
+          "description": "Type: libur_nasional or cuti_bersama"
+        },
+        "keterangan": {
+          "type": "string",
+          "description": "Additional note or government decree"
+        }
+      },
+      "required": ["tanggal", "nama", "jenis"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Admin accounts with management privileges"
+    },
+    "/settings/{settingId}": {
+      "schema": "WorkHours",
+      "description": "General application settings including work hours"
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Master data of employees keyed by NIP"
+    },
+    "/attendances/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Attendance transaction logs imported from fingerprint machines"
+    },
+    "/holidays/{holidayId}": {
+      "schema": "Holiday",
+      "description": "National holidays and collective leave days"
+    }
+  }
+}
