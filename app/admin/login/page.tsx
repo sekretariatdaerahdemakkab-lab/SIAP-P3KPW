@@ -71,7 +71,7 @@ export default function AdminLogin() {
             Login Administrator
           </h1>
           <p className="text-slate-400 text-sm">
-            Portal Manajemen Absensi PPPK Paruh Waktu
+            Manajemen Absensi PPPK Paruh Waktu
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function AdminLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  placeholder="admin@setda.demak.go.id"
+                  placeholder="Masukkan Email"
                   required
                 />
               </div>
@@ -134,7 +134,7 @@ export default function AdminLogin() {
               className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Kembali ke Portal Rekapitulasi
+              Kembali ke Rekapitulasi
             </Link>
           </div>
         </div>

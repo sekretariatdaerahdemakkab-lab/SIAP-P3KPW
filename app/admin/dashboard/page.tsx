@@ -1,7 +1,7 @@
 'use client';
 
 import AdminImportExcel from '@/components/AdminImportExcel';
-import { Users, Clock, FileSpreadsheet, Download, ArrowRight, ShieldCheck, Calendar } from 'lucide-react';
+import { Users, Clock, FileSpreadsheet, Download, ArrowRight, ShieldCheck, Calendar, FileText } from 'lucide-react';
 import Link from 'next/link';
 import * as xlsx from 'xlsx';
 
@@ -45,7 +45,33 @@ export default function AdminDashboard() {
   return (
     <>
       {/* Top Stat/Nav Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <Link
+          href="/admin/dashboard/recap"
+          className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 flex items-center gap-3.5 hover:border-emerald-300 hover:shadow-md transition-all group"
+        >
+          <div className="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <FileSpreadsheet className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500">Rekapitulasi Absensi</p>
+            <p className="text-sm font-bold text-slate-800">Rekap Seluruh</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/dashboard/permits"
+          className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 flex items-center gap-3.5 hover:border-indigo-300 hover:shadow-md transition-all group"
+        >
+          <div className="w-11 h-11 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500">Verifikasi Izin/DL</p>
+            <p className="text-sm font-bold text-slate-800">Persetujuan Izin</p>
+          </div>
+        </Link>
+
         <Link
           href="/admin/dashboard/employees"
           className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 flex items-center gap-3.5 hover:border-blue-300 hover:shadow-md transition-all group"
@@ -55,7 +81,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <p className="text-xs font-medium text-slate-500">Kelola Pegawai</p>
-            <p className="text-base font-bold text-slate-800">Master Pegawai</p>
+            <p className="text-sm font-bold text-slate-800">Master Pegawai</p>
           </div>
         </Link>
 
@@ -68,7 +94,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <p className="text-xs font-medium text-slate-500">Kelola Jam Kerja</p>
-            <p className="text-base font-bold text-slate-800">Aturan Jam Kerja</p>
+            <p className="text-sm font-bold text-slate-800">Aturan Jam</p>
           </div>
         </Link>
 
@@ -81,19 +107,9 @@ export default function AdminDashboard() {
           </div>
           <div>
             <p className="text-xs font-medium text-slate-500">Kalender & Libur</p>
-            <p className="text-base font-bold text-slate-800">Libur & Cuti</p>
+            <p className="text-sm font-bold text-slate-800">Libur & Cuti</p>
           </div>
         </Link>
-
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 flex items-center gap-3.5">
-          <div className="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Keamanan Sistem</p>
-            <p className="text-base font-bold text-slate-800">Database Online</p>
-          </div>
-        </div>
       </div>
 
       {/* Main Feature Sections */}

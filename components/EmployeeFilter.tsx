@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import * as xlsx from 'xlsx';
+import Link from 'next/link';
 import {
   Calendar,
   Clock,
@@ -23,8 +24,12 @@ import {
   Check,
   UserX,
   RefreshCw,
-  Moon
+  Moon,
+  FileText,
+  KeyRound,
+  ArrowRight
 } from 'lucide-react';
+import { PermitItem, PERMIT_TYPES } from '@/lib/permits';
 
 interface HolidayItem {
   tanggal: string; // YYYY-MM-DD
@@ -94,6 +99,7 @@ interface CalendarRecapRow {
   keterangan: string;
   totalJam: number | null;
   hasDutyAttendance: boolean; // Attendance on weekend or holiday (e.g. security guard)
+  permit?: PermitItem | null;
   isSpecialRange?: boolean;
   specialScheduleName?: string;
 }
@@ -411,6 +417,32 @@ export default function EmployeeFilter() {
         console.error('Error querying attendances:', err);
       }
 
+      // 4b. Fetch approved permits for calendar presence calculations
+      const permitsMap: Record<string, PermitItem> = {};
+      try {
+        const qPermit = query(
+          collection(db, 'permits'),
+          where('nip', '==', cleanNip),
+          where('status', '==', 'approved')
+        );
+        const permitSnap = await getDocs(qPermit);
+        permitSnap.forEach(pDoc => {
+          const p = { id: pDoc.id, ...(pDoc.data() as Omit<PermitItem, 'id'>) };
+          if (p.tanggal_mulai && p.tanggal_selesai) {
+            const sDate = new Date(p.tanggal_mulai);
+            const eDate = new Date(p.tanggal_selesai);
+            for (let d = new Date(sDate); d <= eDate; d.setDate(d.getDate() + 1)) {
+              const dISO = d.toISOString().split('T')[0];
+              if (dISO.startsWith(prefix)) {
+                permitsMap[dISO] = p;
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Error querying permits for attendance calendar:', err);
+      }
+
       // 5. Build full month calendar rows
       const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
       const builtRows: CalendarRecapRow[] = [];
@@ -547,9 +579,20 @@ export default function EmployeeFilter() {
           }
         }
 
-        // 9. Keterangan
+        // 9. Keterangan & Permit Check
+        const dayPermit = permitsMap[tanggalISO] || null;
         let keterangan = '-';
-        if (holiday) {
+
+        if (dayPermit) {
+          const typeLabel = PERMIT_TYPES[dayPermit.jenis]?.label || dayPermit.jenis;
+          keterangan = `${typeLabel}: ${dayPermit.keterangan || (dayPermit.nomor_surat ? `No. ${dayPermit.nomor_surat}` : 'Sah')}`;
+          if (catatanMasuk === 'Tidak finger masuk') {
+            catatanMasuk = typeLabel;
+          }
+          if (catatanPulang === 'Tidak finger pulang') {
+            catatanPulang = typeLabel;
+          }
+        } else if (holiday) {
           const prefixLabel = holiday.jenis === 'cuti_bersama' ? 'Cuti Bersama' : 'Libur Nasional';
           keterangan = `${prefixLabel}: ${holiday.nama}`;
           if (hasDutyAttendance) {
@@ -591,6 +634,7 @@ export default function EmployeeFilter() {
           keterangan,
           totalJam: att?.total_jam ? Number(att.total_jam) : null,
           hasDutyAttendance,
+          permit: dayPermit,
           isSpecialRange,
           specialScheduleName
         });
@@ -612,6 +656,10 @@ export default function EmployeeFilter() {
   const totalTerlambatCount = calendarRows.filter(r => r.isLate).length;
   const totalMendahuluiCount = calendarRows.filter(r => r.isEarly).length;
   const totalDutyWeekendCount = calendarRows.filter(r => r.hasDutyAttendance).length;
+  const totalPermitDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && !!r.permit).length;
+  const totalDLDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && r.permit?.jenis === 'dinas_luar').length;
+  const totalSakitDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && r.permit?.jenis === 'sakit').length;
+  const totalIzinDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && (r.permit?.jenis === 'izin' || r.permit?.jenis === 'cuti')).length;
   const totalJamKerja = calendarRows.reduce((sum, r) => sum + (r.totalJam || 0), 0).toFixed(2);
 
   // Export to Excel
@@ -1100,46 +1148,80 @@ export default function EmployeeFilter() {
 
       {/* Summary KPI Cards */}
       {hasSearched && calendarRows.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Total Hari</p>
-            <p className="text-xl font-bold text-slate-800 mt-1">{totalDaysInMonth} <span className="text-xs font-normal text-slate-400">Hari</span></p>
-            <p className="text-[10px] text-slate-400">1 Bulan Kalender</p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Total Hari</p>
+              <p className="text-xl font-bold text-slate-800 mt-1">{totalDaysInMonth} <span className="text-xs font-normal text-slate-400">Hari</span></p>
+              <p className="text-[10px] text-slate-400">1 Bulan Kalender</p>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Hari Kerja Efektif</p>
+              <p className="text-xl font-bold text-blue-700 mt-1">{totalWorkdays} <span className="text-xs font-normal text-slate-400">Hari</span></p>
+              <p className="text-[10px] text-slate-400">Senin - Jumat</p>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Kehadiran Finger</p>
+              <p className="text-xl font-bold text-emerald-700 mt-1">{totalHadirDays} <span className="text-xs font-normal text-slate-400">Hari</span></p>
+              <p className="text-[10px] text-slate-400">Ada Data Masuk/Pulang</p>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Izin / DL / Sakit</p>
+              <p className="text-xl font-bold text-indigo-700 mt-1">{totalPermitDays} <span className="text-xs font-normal text-slate-400">Hari</span></p>
+              <p className="text-[10px] text-indigo-600 font-medium">{totalDLDays} DL • {totalSakitDays} S • {totalIzinDays} I</p>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Keterlambatan</p>
+              <p className="text-xl font-bold text-amber-600 mt-1">{totalTerlambatCount} <span className="text-xs font-normal text-slate-400">Kali</span></p>
+              <p className="text-[10px] text-slate-400">Lebih Dari Jam Masuk</p>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Mendahului Pulang</p>
+              <p className="text-xl font-bold text-orange-600 mt-1">{totalMendahuluiCount} <span className="text-xs font-normal text-slate-400">Kali</span></p>
+              <p className="text-[10px] text-slate-400">Kurang Dari Jam Pulang</p>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Piket / Keamanan</p>
+              <p className="text-xl font-bold text-emerald-700 mt-1">{totalDutyWeekendCount} <span className="text-xs font-normal text-slate-400">Hari</span></p>
+              <p className="text-[10px] text-slate-400">Hadir Weekend / Libur</p>
+            </div>
           </div>
 
-          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Hari Kerja Efektif</p>
-            <p className="text-xl font-bold text-blue-700 mt-1">{totalWorkdays} <span className="text-xs font-normal text-slate-400">Hari</span></p>
-            <p className="text-[10px] text-slate-400">Senin - Jumat</p>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Kehadiran Finger</p>
-            <p className="text-xl font-bold text-emerald-700 mt-1">{totalHadirDays} <span className="text-xs font-normal text-slate-400">Hari</span></p>
-            <p className="text-[10px] text-slate-400">Ada Data Masuk/Pulang</p>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Keterlambatan</p>
-            <p className="text-xl font-bold text-amber-600 mt-1">{totalTerlambatCount} <span className="text-xs font-normal text-slate-400">Kali</span></p>
-            <p className="text-[10px] text-slate-400">Lebih Dari Jam Masuk</p>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Mendahului Pulang</p>
-            <p className="text-xl font-bold text-orange-600 mt-1">{totalMendahuluiCount} <span className="text-xs font-normal text-slate-400">Kali</span></p>
-            <p className="text-[10px] text-slate-400">Kurang Dari Jam Pulang</p>
-          </div>
-
-          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-            <p className="text-[10px] uppercase font-bold text-slate-400">Piket / Keamanan</p>
-            <p className="text-xl font-bold text-indigo-700 mt-1">{totalDutyWeekendCount} <span className="text-xs font-normal text-slate-400">Hari</span></p>
-            <p className="text-[10px] text-slate-400">Hadir Weekend / Libur</p>
+          {/* Link to Dedicated Authenticated Permit Portal */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200/80 rounded-xl p-3.5 px-4 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  Pengajuan Izin, Sakit, Cuti, &amp; Dinas Luar (SPT)
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Pengajuan Izin dan histori izin menggunakan PIN pegawai.
+                </p>
+              </div>
+            </div>
+            <Link
+              href={`/portal-izin?nip=${encodeURIComponent(nip)}`}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Pengajuan Izin &amp; Dinas Luar</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+            </Link>
           </div>
         </div>
       )}
 
       {/* Main Table: Full Monthly Attendance Recap (11 Columns) */}
+      {hasSearched && (
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -1346,7 +1428,27 @@ export default function EmployeeFilter() {
                       {/* 11. Keterangan */}
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {row.holiday ? (
+                          {row.permit ? (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                  row.permit.jenis === 'dinas_luar'
+                                    ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                    : row.permit.jenis === 'sakit'
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                    : 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                                }`}
+                              >
+                                <FileText className="w-3 h-3" />
+                                {row.keterangan}
+                              </span>
+                              {row.permit.is_susulan && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                  Susulan
+                                </span>
+                              )}
+                            </div>
+                          ) : row.holiday ? (
                             <span
                               className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
                                 row.holiday.jenis === 'cuti_bersama'
@@ -1402,6 +1504,7 @@ export default function EmployeeFilter() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

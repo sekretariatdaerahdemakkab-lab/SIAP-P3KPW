@@ -59,5 +59,22 @@ service cloud.firestore {
       allow get, list: if true;
       allow create, update, delete: if isSignedIn();
     }
+
+    // Employee authentication credentials & custom PIN for private permit portal
+    match /employee_auth/{nip} {
+      allow get: if true;
+      allow create, update: if true;
+      allow delete: if isSignedIn();
+    }
+
+    // Leave, sick notes, official outside duty (permits)
+    // Employees can create requests and view records (filtered by NIP in queries)
+    // Admin can update approval status or delete; employee can cancel their own pending permit
+    match /permits/{permitId} {
+      allow get, list: if true;
+      allow create: if true;
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() || (resource.data.status == 'pending');
+    }
   }
 }

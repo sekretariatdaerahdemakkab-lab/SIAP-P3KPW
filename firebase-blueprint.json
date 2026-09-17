@@ -125,6 +125,104 @@
         }
       },
       "required": ["tanggal", "nama", "jenis"]
+    },
+    "Permit": {
+      "title": "Permit",
+      "description": "Leave, official duty outside (dinas luar), sick note, or permission requests submitted by employees and approved by admin",
+      "type": "object",
+      "properties": {
+        "nip": {
+          "type": "string",
+          "description": "Employee NIP"
+        },
+        "nama": {
+          "type": "string",
+          "description": "Employee full name"
+        },
+        "unit_kerja": {
+          "type": "string",
+          "description": "Work unit / Bagian in Setda"
+        },
+        "jenis": {
+          "type": "string",
+          "enum": ["dinas_luar", "sakit", "izin", "cuti"],
+          "description": "Type of permit: dinas_luar, sakit, izin, cuti"
+        },
+        "tanggal_mulai": {
+          "type": "string",
+          "description": "Start date of permit YYYY-MM-DD"
+        },
+        "tanggal_selesai": {
+          "type": "string",
+          "description": "End date of permit YYYY-MM-DD"
+        },
+        "jumlah_hari": {
+          "type": "number",
+          "description": "Total business/effective days requested"
+        },
+        "keterangan": {
+          "type": "string",
+          "description": "Detailed explanation or task objective"
+        },
+        "nomor_surat": {
+          "type": "string",
+          "description": "Official letter / SPT / Doctor note number"
+        },
+        "lampiran_url": {
+          "type": "string",
+          "description": "Attachment image or PDF data URI / storage URL"
+        },
+        "lampiran_nama": {
+          "type": "string",
+          "description": "File name of attachment"
+        },
+        "is_susulan": {
+          "type": "boolean",
+          "description": "Flag indicating if permit was submitted retroactively"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"],
+          "description": "Approval status"
+        },
+        "catatan_admin": {
+          "type": "string",
+          "description": "Admin review notes or rejection reason"
+        },
+        "approved_by": {
+          "type": "string",
+          "description": "Email of admin who approved or rejected"
+        },
+        "approved_at": {
+          "type": "string",
+          "description": "ISO timestamp of review action"
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp of submission"
+        }
+      },
+      "required": ["nip", "nama", "jenis", "tanggal_mulai", "tanggal_selesai", "status"]
+    },
+    "EmployeeAuth": {
+      "title": "EmployeeAuth",
+      "description": "Authentication credentials and custom PIN for employee private portal",
+      "type": "object",
+      "properties": {
+        "nip": {
+          "type": "string",
+          "description": "Employee NIP identifier"
+        },
+        "pin": {
+          "type": "string",
+          "description": "Secure PIN or passcode"
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "ISO timestamp of last PIN update"
+        }
+      },
+      "required": ["nip", "pin"]
     }
   },
   "firestore": {
@@ -140,6 +238,10 @@
       "schema": "Employee",
       "description": "Master data of employees keyed by NIP"
     },
+    "/employee_auth/{nip}": {
+      "schema": "EmployeeAuth",
+      "description": "Security credentials and custom access PIN per employee"
+    },
     "/attendances/{attendanceId}": {
       "schema": "Attendance",
       "description": "Attendance transaction logs imported from fingerprint machines"
@@ -147,6 +249,10 @@
     "/holidays/{holidayId}": {
       "schema": "Holiday",
       "description": "National holidays and collective leave days"
+    },
+    "/permits/{permitId}": {
+      "schema": "Permit",
+      "description": "Employee leave, official duty (dinas luar), and sick note requests with approval workflow"
     }
   }
 }
