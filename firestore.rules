@@ -67,13 +67,19 @@ service cloud.firestore {
       allow delete: if isSignedIn();
     }
 
+    // Supervisor (Atasan) master list and custom PINs
+    match /atasan_users/{nip} {
+      allow get, list: if true;
+      allow create, update, delete: if true;
+    }
+
     // Leave, sick notes, official outside duty (permits)
     // Employees can create requests and view records (filtered by NIP in queries)
-    // Admin can update approval status or delete; employee can cancel their own pending permit
+    // Admin and Atasan can review/approve permits; employee can cancel their own pending permit
     match /permits/{permitId} {
       allow get, list: if true;
       allow create: if true;
-      allow update: if isSignedIn();
+      allow update: if true;
       allow delete: if isSignedIn() || (resource.data.status == 'pending');
     }
   }

@@ -1,9 +1,16 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PermitItem, PERMIT_TYPES, calculateDateRangeDays, checkIsSusulan } from '@/lib/permits';
+import {
+  PermitItem,
+  PERMIT_TYPES,
+  FORM_PERMIT_TYPES,
+  FormPermitType,
+  calculateDateRangeDays,
+  checkIsSusulan
+} from '@/lib/permits';
 import {
   FileText,
   Calendar,
@@ -41,7 +48,7 @@ export default function PermitFormModal({
 }: PermitFormModalProps) {
   const effectiveNip = defaultNip || prefilledNip || '';
   const effectiveNama = defaultNama || prefilledNama || '';
-  const [jenis, setJenis] = useState<'dinas_luar' | 'sakit' | 'izin' | 'cuti'>('dinas_luar');
+  const [jenis, setJenis] = useState<FormPermitType>('dinas_luar');
   const todayISO = new Date().toISOString().split('T')[0];
   const [tanggalMulai, setTanggalMulai] = useState<string>(todayISO);
   const [tanggalSelesai, setTanggalSelesai] = useState<string>(todayISO);
@@ -189,8 +196,8 @@ export default function PermitFormModal({
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               Jenis Permohonan <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(Object.keys(PERMIT_TYPES) as Array<keyof typeof PERMIT_TYPES>).map((key) => {
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {FORM_PERMIT_TYPES.map((key) => {
                 const cfg = PERMIT_TYPES[key];
                 const active = jenis === key;
                 return (
@@ -302,7 +309,7 @@ export default function PermitFormModal({
                   ? 'Contoh: Mengikuti Rapat Koordinasi Penataan Tenaga Non-ASN di BKD Provinsi Jawa Tengah, Semarang'
                   : jenis === 'sakit'
                   ? 'Contoh: Istirahat rawat jalan demam tinggi sesuai anjuran dokter Puskesmas Demak 1'
-                  : 'Tuliskan rincian alasan izin yang jelas...'
+                  : 'Contoh: Pengajuan cuti tahunan / bersalin sesuai ketentuan yang berlaku'
               }
               className="w-full px-3 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden transition-all resize-none"
               required

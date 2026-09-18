@@ -16,9 +16,86 @@ export interface PermitItem {
   status: 'pending' | 'approved' | 'rejected';
   catatan_admin?: string;
   approved_by?: string;
+  approved_by_role?: 'admin' | 'atasan';
+  approved_by_nip?: string;
+  approved_by_jabatan?: string;
   approved_at?: string;
   created_at: string; // ISO
 }
+
+export interface AtasanUser {
+  nip: string;
+  nama: string;
+  jabatan: string;
+  unit_kerja: string;
+  pin?: string;
+}
+
+export const DEFAULT_ATASAN_LIST: AtasanUser[] = [
+  {
+    nip: '197505121998031002',
+    nama: 'Kepala Bagian Umum',
+    jabatan: 'Kepala Bagian Umum',
+    unit_kerja: 'Bagian Umum',
+    pin: '123456'
+  },
+  {
+    nip: '197803152002121004',
+    nama: 'Kepala Bagian Hukum',
+    jabatan: 'Kepala Bagian Hukum',
+    unit_kerja: 'Bagian Hukum',
+    pin: '123456'
+  },
+  {
+    nip: '198006202005012008',
+    nama: 'Kepala Bagian Organisasi',
+    jabatan: 'Kepala Bagian Organisasi',
+    unit_kerja: 'Bagian Organisasi',
+    pin: '123456'
+  },
+  {
+    nip: '197609142000031001',
+    nama: 'Kepala Bagian Perekonomian & SDA',
+    jabatan: 'Kepala Bagian Perekonomian & SDA',
+    unit_kerja: 'Bagian Perekonomian & SDA',
+    pin: '123456'
+  },
+  {
+    nip: '197904082003121003',
+    nama: 'Kepala Bagian Administrasi Pembangunan',
+    jabatan: 'Kepala Bagian Administrasi Pembangunan',
+    unit_kerja: 'Bagian Administrasi Pembangunan',
+    pin: '123456'
+  },
+  {
+    nip: '198111052006041005',
+    nama: 'Kepala Bagian Pengadaan Barang & Jasa',
+    jabatan: 'Kepala Bagian Pengadaan Barang & Jasa',
+    unit_kerja: 'Bagian Pengadaan Barang & Jasa',
+    pin: '123456'
+  },
+  {
+    nip: '197408101997031002',
+    nama: 'Kepala Bagian Tata Pemerintahan',
+    jabatan: 'Kepala Bagian Tata Pemerintahan',
+    unit_kerja: 'Bagian Tata Pemerintahan',
+    pin: '123456'
+  },
+  {
+    nip: '197702182001121002',
+    nama: 'Kepala Bagian Kesejahteraan Rakyat',
+    jabatan: 'Kepala Bagian Kesejahteraan Rakyat',
+    unit_kerja: 'Bagian Kesejahteraan Rakyat',
+    pin: '123456'
+  },
+  {
+    nip: '198307222008011006',
+    nama: 'Kepala Bagian Protokol & Komunikasi Pimpinan',
+    jabatan: 'Kepala Bagian Protokol & Komunikasi Pimpinan',
+    unit_kerja: 'Bagian Protokol & Komunikasi Pimpinan',
+    pin: '123456'
+  }
+];
 
 export const PERMIT_TYPES = {
   dinas_luar: {
@@ -49,11 +126,17 @@ export const PERMIT_TYPES = {
     label: 'Cuti (C)',
     badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     shortCode: 'C',
-    description: 'Cuti tahunan / melahirkan / alasan penting yang disetujui',
+    description: 'Cuti tahunan / bersalin yang disetujui',
     letterLabel: 'Nomor Surat Keputusan / Pengajuan Cuti',
     fileLabel: 'Unggah Berkas Formulir Cuti'
   }
 } as const;
+
+/**
+ * Daftar jenis izin resmi yang berlaku pada formulir pengajuan
+ */
+export const FORM_PERMIT_TYPES = ['dinas_luar', 'sakit', 'cuti'] as const;
+export type FormPermitType = typeof FORM_PERMIT_TYPES[number];
 
 /**
  * Utility to calculate day difference between two dates

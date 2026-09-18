@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, updateDoc, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { PermitItem, PERMIT_TYPES } from '@/lib/permits';
+import Link from 'next/link';
 import {
   FileText,
   Search,
@@ -21,7 +22,8 @@ import {
   Building,
   User,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  UserCheck
 } from 'lucide-react';
 
 export default function AdminPermitsManagement() {
@@ -157,13 +159,23 @@ export default function AdminPermitsManagement() {
             Panel verifikasi dan pengesahan permohonan dinas luar (SPT), izin istirahat sakit (SKD), dan izin mandiri pegawai PPPK Paruh Waktu Setda Demak.
           </p>
         </div>
-        <button
-          onClick={handleManualRefresh}
-          className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-xs self-start md:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`} />
-          Segarkan Data
-        </button>
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <Link
+            href="/persetujuan-izin"
+            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            title="Buka Lembar Verifikasi Persetujuan Izin Khusus Atasan & Admin"
+          >
+            <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Portal Approve (Atasan/Admin)</span>
+          </Link>
+          <button
+            onClick={handleManualRefresh}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`} />
+            Segarkan Data
+          </button>
+        </div>
       </div>
 
       {/* Metric Cards */}
@@ -261,7 +273,6 @@ export default function AdminPermitsManagement() {
             <option value="all">Semua Jenis Izin</option>
             <option value="dinas_luar">Dinas Luar (DL)</option>
             <option value="sakit">Sakit (S)</option>
-            <option value="izin">Izin Alasan Penting (I)</option>
             <option value="cuti">Cuti (C)</option>
           </select>
         </div>

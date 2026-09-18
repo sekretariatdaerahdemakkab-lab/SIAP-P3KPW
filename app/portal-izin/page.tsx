@@ -44,7 +44,8 @@ import {
   Trash2,
   RefreshCw,
   HelpCircle,
-  Check
+  Check,
+  UserCheck
 } from 'lucide-react';
 
 interface EmployeeSession {
@@ -418,13 +419,24 @@ function PortalIzinContent() {
               <p className="text-[11px] text-slate-500 font-medium">Sekretariat Daerah Kabupaten Demak</p>
             </div>
           </div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali ke Presensi Publik</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/persetujuan-izin"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg transition-colors"
+              title="Panel persetujuan untuk Atasan & Admin"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">Persetujuan Atasan/Admin</span>
+              <span className="sm:hidden">Approve</span>
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Presensi</span>
+            </Link>
+          </div>
         </header>
 
         {/* Auth Form Container */}
@@ -831,7 +843,6 @@ function PortalIzinContent() {
                 <option value="all">Semua Kategori</option>
                 <option value="dinas_luar">Dinas Luar (DL)</option>
                 <option value="sakit">Sakit (S)</option>
-                <option value="izin">Izin Dinas / Pribadi (I)</option>
                 <option value="cuti">Cuti (C)</option>
               </select>
             </div>

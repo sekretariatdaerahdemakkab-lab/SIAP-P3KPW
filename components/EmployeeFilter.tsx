@@ -653,6 +653,12 @@ export default function EmployeeFilter() {
   const totalDaysInMonth = calendarRows.length;
   const totalWorkdays = calendarRows.filter(r => !r.isWeekend && !r.holiday).length;
   const totalHadirDays = calendarRows.filter(r => r.absensiMasuk !== '-' || r.absensiPulang !== '-').length;
+  const totalTidakLengkapCount = calendarRows.filter(
+    r => !r.isWeekend && !r.holiday && (
+      (r.absensiMasuk !== '-' && r.absensiPulang === '-') ||
+      (r.absensiMasuk === '-' && r.absensiPulang !== '-')
+    )
+  ).length;
   const totalTerlambatCount = calendarRows.filter(r => r.isLate).length;
   const totalMendahuluiCount = calendarRows.filter(r => r.isEarly).length;
   const totalDutyWeekendCount = calendarRows.filter(r => r.hasDutyAttendance).length;
@@ -1149,7 +1155,7 @@ export default function EmployeeFilter() {
       {/* Summary KPI Cards */}
       {hasSearched && calendarRows.length > 0 && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
             <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
               <p className="text-[10px] uppercase font-bold text-slate-400">Total Hari</p>
               <p className="text-xl font-bold text-slate-800 mt-1">{totalDaysInMonth} <span className="text-xs font-normal text-slate-400">Hari</span></p>
@@ -1166,6 +1172,14 @@ export default function EmployeeFilter() {
               <p className="text-[10px] uppercase font-bold text-slate-400">Kehadiran Finger</p>
               <p className="text-xl font-bold text-emerald-700 mt-1">{totalHadirDays} <span className="text-xs font-normal text-slate-400">Hari</span></p>
               <p className="text-[10px] text-slate-400">Ada Data Masuk/Pulang</p>
+            </div>
+
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+              <p className="text-[10px] uppercase font-bold text-slate-400 truncate" title="Kehadiran Tidak Lengkap (Hanya scan masuk atau scan pulang saja pada hari kerja)">
+                Tidak Lengkap
+              </p>
+              <p className="text-xl font-bold text-rose-600 mt-1">{totalTidakLengkapCount} <span className="text-xs font-normal text-slate-400">Hari</span></p>
+              <p className="text-[10px] text-slate-400">Hanya 1 Kali Scan</p>
             </div>
 
             <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
@@ -1210,6 +1224,7 @@ export default function EmployeeFilter() {
             </div>
             <Link
               href={`/portal-izin?nip=${encodeURIComponent(nip)}`}
+              prefetch={false}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
             >
               <KeyRound className="w-3.5 h-3.5" />
@@ -1236,7 +1251,7 @@ export default function EmployeeFilter() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-3 text-xs flex-wrap">
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-xs bg-rose-100 border border-rose-300"></span>
               <span className="text-slate-600 font-medium">Hari Libur / Akhir Pekan</span>
@@ -1244,6 +1259,10 @@ export default function EmployeeFilter() {
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-xs bg-emerald-100 border border-emerald-400"></span>
               <span className="text-slate-600 font-medium">Piket Keamanan Hadir</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-xs bg-rose-50 border border-rose-300"></span>
+              <span className="text-slate-600 font-medium">Tidak Lengkap (1 Scan)</span>
             </div>
           </div>
         </div>
@@ -1462,14 +1481,17 @@ export default function EmployeeFilter() {
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-red-100/70 text-red-800 border border-red-200">
                               {row.keterangan}
                             </span>
+                          ) : row.keterangan === 'Absensi Tidak Lengkap' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              <AlertCircle className="w-3 h-3 text-rose-500" />
+                              Absensi Tidak Lengkap
+                            </span>
                           ) : (
                             <span
                               className={`text-[11px] font-medium ${
                                 row.keterangan === 'Hadir Lengkap'
                                   ? 'text-emerald-700 font-semibold'
-                                  : row.keterangan === 'Tidak Hadir'
-                                  ? 'text-slate-400'
-                                  : 'text-amber-700 font-semibold'
+                                  : 'text-slate-400'
                               }`}
                             >
                               {row.keterangan}

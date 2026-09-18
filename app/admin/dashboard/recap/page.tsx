@@ -15,6 +15,7 @@ import {
   Users,
   CheckCircle2,
   AlertTriangle,
+  AlertCircle,
   Clock,
   ShieldCheck,
   Building2,
@@ -38,6 +39,7 @@ interface EmployeeRecapRow {
   total_hari: number;
   hari_kerja_efektif: number;
   kehadiran: number;
+  tidak_lengkap: number;
   keterlambatan: number;
   mendahului: number;
   piket: number;
@@ -59,6 +61,7 @@ interface DailyLogItem {
   isLate: boolean;
   isEarly: boolean;
   isPiket: boolean;
+  isTidakLengkap?: boolean;
   catatan: string;
   permit?: PermitItem;
 }
@@ -311,6 +314,7 @@ export default function AttendanceRecapPage() {
           const empAtt = attMap[emp.nip] || {};
           const empPermit = permitMap[emp.nip] || {};
           let kehadiran = 0;
+          let tidakLengkap = 0;
           let keterlambatan = 0;
           let mendahului = 0;
           let piket = 0;
@@ -332,6 +336,11 @@ export default function AttendanceRecapPage() {
                 // Clocked in on weekend or holiday -> Piket / Penugasan Khusus
                 piket++;
               } else {
+                // Regular working day: check if attendance is incomplete (only 1 punch)
+                if ((hasMasuk && !hasPulang) || (!hasMasuk && hasPulang)) {
+                  tidakLengkap++;
+                }
+
                 // Regular working day: check late & early
                 if (hasMasuk) {
                   const masukSec = parseTimeToSeconds(att.waktu_masuk);
@@ -374,6 +383,7 @@ export default function AttendanceRecapPage() {
             total_hari: daysInMonth,
             hari_kerja_efektif: effectiveWorkingDays,
             kehadiran,
+            tidak_lengkap: tidakLengkap,
             keterlambatan,
             mendahului,
             piket,
@@ -464,6 +474,7 @@ export default function AttendanceRecapPage() {
   const stats = useMemo(() => {
     const totalPegawai = filteredData.length;
     const totalKehadiran = filteredData.reduce((acc, curr) => acc + curr.kehadiran, 0);
+    const totalTidakLengkap = filteredData.reduce((acc, curr) => acc + curr.tidak_lengkap, 0);
     const totalIzinSah = filteredData.reduce((acc, curr) => acc + curr.izin_sah, 0);
     const totalDL = filteredData.reduce((acc, curr) => acc + curr.dinas_luar, 0);
     const totalSakit = filteredData.reduce((acc, curr) => acc + curr.sakit, 0);
@@ -478,6 +489,7 @@ export default function AttendanceRecapPage() {
     return {
       totalPegawai,
       totalKehadiran,
+      totalTidakLengkap,
       totalIzinSah,
       totalDL,
       totalSakit,
@@ -523,6 +535,7 @@ export default function AttendanceRecapPage() {
       'TOTAL HARI',
       'HARI KERJA EFEKTIF',
       'KEHADIRAN FISIK',
+      'KEHADIRAN TIDAK LENGKAP',
       'DINAS LUAR (DL)',
       'SAKIT (S)',
       'IZIN/CUTI',
@@ -543,6 +556,7 @@ export default function AttendanceRecapPage() {
         row.total_hari,
         row.hari_kerja_efektif,
         row.kehadiran,
+        row.tidak_lengkap,
         row.dinas_luar,
         row.sakit,
         row.izin_cuti,
@@ -564,6 +578,7 @@ export default function AttendanceRecapPage() {
       '',
       '',
       stats.totalKehadiran,
+      stats.totalTidakLengkap,
       stats.totalDL,
       stats.totalSakit,
       stats.totalIzinCuti,
@@ -585,6 +600,7 @@ export default function AttendanceRecapPage() {
       { wch: 14 }, // TOTAL HARI
       { wch: 20 }, // HARI KERJA EFEKTIF
       { wch: 16 }, // KEHADIRAN FISIK
+      { wch: 24 }, // KEHADIRAN TIDAK LENGKAP
       { wch: 16 }, // DINAS LUAR (DL)
       { wch: 12 }, // SAKIT (S)
       { wch: 12 }, // IZIN/CUTI
@@ -720,6 +736,7 @@ export default function AttendanceRecapPage() {
         let isLate = false;
         let isEarly = false;
         let isPiket = false;
+        let isTidakLengkap = false;
         let catatan = '-';
 
         if (hasFinger) {
@@ -727,7 +744,8 @@ export default function AttendanceRecapPage() {
             isPiket = true;
             catatan = isHoliday ? `Piket (${holidayName})` : 'Piket Akhir Pekan';
           } else {
-            catatan = 'Hadir Lengkap';
+            isTidakLengkap = (waktu_masuk !== '-' && waktu_keluar === '-') || (waktu_masuk === '-' && waktu_keluar !== '-');
+            catatan = isTidakLengkap ? 'Absensi Tidak Lengkap' : 'Hadir Lengkap';
             if (waktu_masuk !== '-') {
               const masukSec = parseTimeToSeconds(waktu_masuk);
               if (masukSec !== null && masukSec > dayMasukSec) {
@@ -765,6 +783,7 @@ export default function AttendanceRecapPage() {
           isLate,
           isEarly,
           isPiket,
+          isTidakLengkap,
           catatan,
           permit: dayPermit
         });
@@ -942,7 +961,7 @@ export default function AttendanceRecapPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2.5">
         <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 mb-1">
             <span className="text-[10px] font-bold uppercase tracking-wider">Pegawai</span>
@@ -968,6 +987,17 @@ export default function AttendanceRecapPage() {
           </div>
           <div className="text-xl font-bold text-slate-900">{stats.totalKehadiran}</div>
           <span className="text-[9px] text-slate-400 mt-0.5">Finger scan</span>
+        </div>
+
+        <div className="bg-white rounded-xl border border-amber-200 bg-amber-50/20 p-3.5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-amber-600 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Tdk Lengkap</span>
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+          </div>
+          <div className={`text-xl font-bold ${stats.totalTidakLengkap > 0 ? 'text-amber-700' : 'text-slate-700'}`}>
+            {stats.totalTidakLengkap}
+          </div>
+          <span className="text-[9px] text-amber-600/80 mt-0.5">1x scan saja</span>
         </div>
 
         <div className="bg-white rounded-xl border border-indigo-100 bg-indigo-50/20 p-3.5 shadow-xs flex flex-col justify-between">
@@ -1080,6 +1110,16 @@ export default function AttendanceRecapPage() {
                     </div>
                   </th>
                   <th
+                    onClick={() => handleSort('tidak_lengkap')}
+                    className="py-3.5 px-3 text-center cursor-pointer hover:text-blue-600 transition-colors border-r border-slate-200/60"
+                    title="Jumlah kehadiran tidak lengkap (hanya scan masuk atau scan pulang saja pada hari kerja)"
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <span>TDK LENGKAP</span>
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    </div>
+                  </th>
+                  <th
                     onClick={() => handleSort('izin_sah')}
                     className="py-3.5 px-3 text-center cursor-pointer hover:text-blue-600 transition-colors border-r border-slate-200/60"
                     title="Dinas Luar, Sakit (SKD), Izin/Cuti Sah"
@@ -1173,6 +1213,20 @@ export default function AttendanceRecapPage() {
                         <span>{row.kehadiran}</span>
                         <span className="text-[10px] text-emerald-600 font-normal">hari</span>
                       </div>
+                    </td>
+
+                    {/* KEHADIRAN TIDAK LENGKAP */}
+                    <td className="py-3.5 px-3 text-center border-r border-slate-100 whitespace-nowrap">
+                      {row.tidak_lengkap > 0 ? (
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200"
+                          title={`${row.tidak_lengkap} kali absensi tidak lengkap (hanya scan 1 kali)`}
+                        >
+                          {row.tidak_lengkap} kali
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 font-mono">0</span>
+                      )}
                     </td>
 
                     {/* IZIN SAH (DL, S, I) */}
@@ -1304,6 +1358,9 @@ export default function AttendanceRecapPage() {
             <strong className="text-slate-800">KEHADIRAN:</strong> Total hari di mana pegawai melakukan absensi / ketukan fingerprint pada mesin.
           </li>
           <li>
+            <strong className="text-slate-800">KEHADIRAN TIDAK LENGKAP:</strong> Jumlah hari kerja di mana pegawai hanya melakukan satu kali scan presensi (hanya scan masuk tanpa scan pulang, atau hanya scan pulang tanpa scan masuk).
+          </li>
+          <li>
             <strong className="text-slate-800">KETERLAMBATAN:</strong> Frekuensi pegawai melakukan scan masuk melebihi batas jam kerja masuk resmi (misal &gt; 07:30 atau batas toleransi kedinasan).
           </li>
           <li>
@@ -1357,6 +1414,10 @@ export default function AttendanceRecapPage() {
                 <span className="text-slate-300">|</span>
                 <span>
                   Kehadiran: <strong className="text-emerald-700">{selectedEmployee.kehadiran} Hari</strong> ({selectedEmployee.persen_kehadiran}%)
+                </span>
+                <span className="text-slate-300">|</span>
+                <span>
+                  Tdk Lengkap: <strong className={selectedEmployee.tidak_lengkap > 0 ? 'text-amber-600' : 'text-slate-700'}>{selectedEmployee.tidak_lengkap}x</strong>
                 </span>
                 <span className="text-slate-300">|</span>
                 <span>
@@ -1440,6 +1501,11 @@ export default function AttendanceRecapPage() {
                                 {log.isPiket && (
                                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">
                                     Piket Libur
+                                  </span>
+                                )}
+                                {log.isTidakLengkap && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                    Tdk Lengkap
                                   </span>
                                 )}
                                 {log.isLate && (
