@@ -375,7 +375,7 @@ export default function PermitFormModal({
                     {currentConfig.fileLabel}
                   </label>
                   <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                    Maks. 200 KB (1-2 Lembar PDF / Gambar)
+                    Maks. 200 KB (PDF / Gambar)
                   </span>
                 </div>
 

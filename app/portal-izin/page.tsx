@@ -715,7 +715,7 @@ function PortalIzinContent() {
               className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Buat Pengajuan Izin / Dinas Luar Baru</span>
+              <span>Pengajuan Izin / Dinas Luar Baru</span>
             </button>
           </div>
         </div>
