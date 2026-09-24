@@ -17,10 +17,12 @@ import {
   PermitItem,
   PERMIT_TYPES,
   AtasanUser,
-  DEFAULT_ATASAN_LIST
+  DEFAULT_ATASAN_LIST,
+  ensureAtasanInFirestore
 } from '@/lib/permits';
 import * as xlsx from 'xlsx';
 import Link from 'next/link';
+import DocumentViewerModal from '@/components/DocumentViewerModal';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -50,7 +52,8 @@ import {
   KeyRound,
   Edit2,
   Plus,
-  Trash2
+  Trash2,
+  Info
 } from 'lucide-react';
 
 interface ApprovalSession {
@@ -60,6 +63,21 @@ interface ApprovalSession {
   jabatan: string;
   unit_kerja?: string;
   email?: string;
+}
+
+interface ToastNotification {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  title?: string;
+  message: string;
+}
+
+interface DeleteConfirmTarget {
+  type: 'atasan' | 'permit';
+  id: string;
+  title: string;
+  subtitle: string;
+  extraDetails?: { label: string; value: string }[];
 }
 
 export default function PermitApprovalPortal() {
@@ -76,6 +94,27 @@ export default function PermitApprovalPortal() {
     return null;
   });
   const [sessionLoading, setSessionLoading] = useState(true);
+
+  // Toast notifications state
+  const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  // Delete confirmation modal state
+  const [deleteTarget, setDeleteTarget] = useState<DeleteConfirmTarget | null>(null);
+  const [deleteExecuting, setDeleteExecuting] = useState(false);
+
+  const showToast = useCallback(
+    (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success', title?: string) => {
+      const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
+      setToasts((prev) => [...prev, { id, type, title, message }]);
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4000);
+    },
+    []
+  );
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   // Login Gate State (when not logged in)
   const [activeTab, setActiveTab] = useState<'atasan' | 'admin'>('atasan');
@@ -124,6 +163,7 @@ export default function PermitApprovalPortal() {
   // Document Lightbox Preview Modal
   const [previewAttachmentUrl, setPreviewAttachmentUrl] = useState<string | null>(null);
   const [previewAttachmentTitle, setPreviewAttachmentTitle] = useState<string>('');
+  const [previewAttachmentFileName, setPreviewAttachmentFileName] = useState<string>('Lampiran_Dokumen');
 
   // Atasan Management Modal State (Add/Edit supervisor names, PINs, and units)
   const [showManageAtasanModal, setShowManageAtasanModal] = useState(false);
@@ -137,63 +177,26 @@ export default function PermitApprovalPortal() {
   const [savingAtasan, setSavingAtasan] = useState(false);
   const [manageAtasanMsg, setManageAtasanMsg] = useState<string | null>(null);
 
-  // Load / Refresh Atasan List from Firestore & Defaults
+  // Load / Refresh Atasan List directly from Firestore database
   const loadAtasanData = useCallback(async () => {
     try {
+      // 1. Ensure initial master atasan data is seeded to Firestore if empty
+      await ensureAtasanInFirestore();
+
+      // 2. Read directly and permanently from Firestore collection atasan_users
+      const customSnap = await getDocs(collection(db, 'atasan_users'));
       const atasanMap = new Map<string, AtasanUser>();
 
-      // 1. Base default atasan list
-      DEFAULT_ATASAN_LIST.forEach((item) => {
-        atasanMap.set(item.nip, { ...item });
-      });
-
-      // 2. Potential supervisors from employees collection
-      try {
-        const empSnap = await getDocs(collection(db, 'employees'));
-        empSnap.docs.forEach((docSnap) => {
-          const data = docSnap.data();
-          const jabatan = (data.jabatan || '').toLowerCase();
-          if (
-            jabatan.includes('kepala') ||
-            jabatan.includes('kabag') ||
-            jabatan.includes('kasubag') ||
-            jabatan.includes('koordinator') ||
-            jabatan.includes('asisten') ||
-            jabatan.includes('sekretaris')
-          ) {
-            if (!atasanMap.has(docSnap.id)) {
-              atasanMap.set(docSnap.id, {
-                nip: docSnap.id,
-                nama: data.nama || 'Pejabat Setda',
-                jabatan: data.jabatan || 'Pejabat Struktural',
-                unit_kerja: data.unit_kerja || 'Sekretariat Daerah',
-                pin: '123456'
-              });
-            }
-          }
+      customSnap.docs.forEach((docSnap) => {
+        const d = docSnap.data();
+        atasanMap.set(docSnap.id, {
+          nip: docSnap.id,
+          nama: d.nama || '',
+          jabatan: d.jabatan || '',
+          unit_kerja: d.unit_kerja || '',
+          pin: d.pin || '123456'
         });
-      } catch (e) {
-        console.warn('Note: Could not query employees for supervisors:', e);
-      }
-
-      // 3. Custom supervisors saved in Firestore atasan_users (highest priority, overrides default)
-      try {
-        const customSnap = await getDocs(collection(db, 'atasan_users'));
-        if (!customSnap.empty) {
-          customSnap.docs.forEach((docSnap) => {
-            const d = docSnap.data();
-            atasanMap.set(docSnap.id, {
-              nip: docSnap.id,
-              nama: d.nama || '',
-              jabatan: d.jabatan || '',
-              unit_kerja: d.unit_kerja || '',
-              pin: d.pin || '123456'
-            });
-          });
-        }
-      } catch (e) {
-        console.warn('Note: Could not query atasan_users in Firestore:', e);
-      }
+      });
 
       const combined = Array.from(atasanMap.values());
       // Sort nicely by Unit Kerja then Nama
@@ -203,7 +206,7 @@ export default function PermitApprovalPortal() {
       );
       setAtasanList(combined);
     } catch (err) {
-      console.warn('Error loading atasan list:', err);
+      console.warn('Error loading atasan list from Firestore:', err);
     }
   }, []);
 
@@ -400,7 +403,7 @@ export default function PermitApprovalPortal() {
   const handleSaveAtasan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formAtasanNip.trim() || !formAtasanNama.trim() || !formAtasanUnitKerja.trim()) {
-      alert('NIP, Nama Pejabat, dan Unit Kerja / Bagian wajib diisi.');
+      showToast('NIP, Nama Pejabat, dan Unit Kerja / Bagian wajib diisi lengkap.', 'warning', 'Form Belum Lengkap');
       return;
     }
 
@@ -408,6 +411,7 @@ export default function PermitApprovalPortal() {
     setManageAtasanMsg(null);
     try {
       const cleanNip = formAtasanNip.trim();
+      const isEditing = !!editingAtasanNip;
       const docData = {
         nip: cleanNip,
         nama: formAtasanNama.trim(),
@@ -420,28 +424,35 @@ export default function PermitApprovalPortal() {
       await setDoc(doc(db, 'atasan_users', cleanNip), docData);
       await loadAtasanData();
 
-      setManageAtasanMsg(`Data pejabat ${formAtasanNama} berhasil disimpan!`);
-      // Reset form to blank
+      const successMsg = isEditing
+        ? `Data pejabat "${formAtasanNama}" berhasil diperbarui.`
+        : `Pejabat baru "${formAtasanNama}" berhasil ditambahkan!`;
+
+      setManageAtasanMsg(successMsg);
+      showToast(successMsg, 'success', isEditing ? 'Pejabat Diperbarui' : 'Pejabat Ditambahkan');
       handleOpenNewAtasan();
       setTimeout(() => setManageAtasanMsg(null), 3500);
     } catch (err: any) {
       console.error('Error saving atasan:', err);
-      alert('Gagal menyimpan atasan: ' + (err.message || 'Periksa koneksi'));
+      showToast('Gagal menyimpan atasan: ' + (err.message || 'Periksa koneksi internet'), 'error', 'Gagal Simpan');
     } finally {
       setSavingAtasan(false);
     }
   };
 
-  const handleDeleteAtasan = async (nipToDelete: string, nama: string) => {
-    if (!confirm(`Hapus atasan ${nama} (${nipToDelete}) dari daftar?`)) return;
-    try {
-      await deleteDoc(doc(db, 'atasan_users', nipToDelete));
-      await loadAtasanData();
-      alert(`Data atasan ${nama} berhasil dihapus.`);
-    } catch (err: any) {
-      console.error('Error deleting atasan:', err);
-      alert('Gagal menghapus: ' + err.message);
-    }
+  const handleDeleteAtasan = (atasan: AtasanUser) => {
+    setDeleteTarget({
+      type: 'atasan',
+      id: atasan.nip,
+      title: 'Hapus Pejabat / Atasan',
+      subtitle: `Apakah Anda yakin ingin menghapus pejabat ini dari daftar atasan langsung?`,
+      extraDetails: [
+        { label: 'Nama Pejabat', value: atasan.nama },
+        { label: 'NIP', value: atasan.nip },
+        { label: 'Bagian / Unit Kerja', value: atasan.unit_kerja },
+        { label: 'Jabatan', value: atasan.jabatan }
+      ]
+    });
   };
 
   // Helper to match unit kerja flexibly & cleanly
@@ -469,8 +480,10 @@ export default function PermitApprovalPortal() {
     // Strict authority guard for Atasan: only permits within their department
     if (session.role === 'atasan' && session.unit_kerja) {
       if (!isMatchingUnit(selectedPermit.unit_kerja, session.unit_kerja)) {
-        alert(
-          `Otorisasi ditolak: Anda hanya berwenang memverifikasi permohonan dari pegawai di lingkungan ${session.unit_kerja}.`
+        showToast(
+          `Otorisasi ditolak: Anda hanya berwenang memverifikasi permohonan dari pegawai di lingkungan ${session.unit_kerja}.`,
+          'error',
+          'Akses Dibatasi'
         );
         return;
       }
@@ -511,9 +524,9 @@ export default function PermitApprovalPortal() {
         prev.map((p) => (p.id === selectedPermit.id ? { ...p, ...updateData } : p))
       );
 
-      setActionSuccess(
-        `Permohonan berhasil ${newStatus === 'approved' ? 'disetujui' : 'ditolak'}!`
-      );
+      const msg = `Permohonan ${selectedPermit.nama} berhasil ${newStatus === 'approved' ? 'disetujui' : 'ditolak'}!`;
+      setActionSuccess(msg);
+      showToast(msg, newStatus === 'approved' ? 'success' : 'info', newStatus === 'approved' ? 'Permohonan Disetujui' : 'Permohonan Ditolak');
 
       setTimeout(() => {
         setSelectedPermit(null);
@@ -522,34 +535,92 @@ export default function PermitApprovalPortal() {
       }, 900);
     } catch (err: any) {
       console.error('Error executing approval:', err);
-      alert('Gagal memproses persetujuan: ' + (err?.message || 'Error jaringan'));
+      showToast('Gagal memproses persetujuan: ' + (err?.message || 'Error jaringan'), 'error', 'Gagal Verifikasi');
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Handle Delete Permit (Admin only)
-  const handleDeletePermit = async (permitId: string) => {
+  // Trigger Delete Confirmation Modal for Permit (Admin only)
+  const confirmDeletePermit = (permit: PermitItem) => {
     if (session?.role !== 'admin') {
-      alert('Hanya Administrator yang memiliki wewenang menghapus dokumen permohonan.');
+      showToast('Hanya Administrator yang memiliki wewenang menghapus dokumen permohonan.', 'error', 'Akses Ditolak');
       return;
     }
-    if (!confirm('Apakah Anda yakin ingin menghapus arsip pengajuan izin ini secara permanen?'))
-      return;
+    const typeLabel = PERMIT_TYPES[permit.jenis]?.label || permit.jenis;
+    setDeleteTarget({
+      type: 'permit',
+      id: permit.id,
+      title: 'Hapus Berkas Pengajuan Izin',
+      subtitle: `Apakah Anda yakin ingin menghapus arsip pengajuan izin ini secara permanen?`,
+      extraDetails: [
+        { label: 'Nama Pegawai', value: permit.nama },
+        { label: 'NIP', value: permit.nip },
+        { label: 'Bagian / Unit Kerja', value: permit.unit_kerja || '-' },
+        { label: 'Kategori Izin', value: typeLabel },
+        {
+          label: 'Periode',
+          value: `${permit.tanggal_mulai} s.d. ${permit.tanggal_selesai} (${permit.jumlah_hari || 1} hari)`
+        },
+        {
+          label: 'Status Saat Ini',
+          value:
+            permit.status === 'approved'
+              ? 'Disetujui'
+              : permit.status === 'rejected'
+              ? 'Ditolak'
+              : 'Menunggu Verifikasi'
+        }
+      ]
+    });
+  };
+
+  // Execution of Delete once confirmed in modal
+  const handleExecuteDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteExecuting(true);
 
     try {
-      await deleteDoc(doc(db, 'permits', permitId));
-      setPermits((prev) => prev.filter((p) => p.id !== permitId));
-      if (selectedPermit?.id === permitId) setSelectedPermit(null);
+      if (deleteTarget.type === 'atasan') {
+        await deleteDoc(doc(db, 'atasan_users', deleteTarget.id));
+        await loadAtasanData();
+        showToast(
+          `Data pejabat ${deleteTarget.id} berhasil dihapus dari daftar.`,
+          'success',
+          'Pejabat Dihapus'
+        );
+      } else if (deleteTarget.type === 'permit') {
+        if (session?.role !== 'admin') {
+          showToast('Hanya Administrator yang berwenang menghapus dokumen.', 'error', 'Akses Ditolak');
+          setDeleteTarget(null);
+          return;
+        }
+        await deleteDoc(doc(db, 'permits', deleteTarget.id));
+        setPermits((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+        if (selectedPermit?.id === deleteTarget.id) setSelectedPermit(null);
+        showToast(
+          'Berkas pengajuan izin berhasil dihapus secara permanen.',
+          'success',
+          'Dokumen Dihapus'
+        );
+      }
+      setDeleteTarget(null);
     } catch (err: any) {
-      alert('Gagal menghapus: ' + err.message);
+      console.error('Error executing delete:', err);
+      showToast(
+        `Gagal menghapus data: ${err?.message || 'Periksa koneksi'}`,
+        'error',
+        'Gagal Menghapus'
+      );
+    } finally {
+      setDeleteExecuting(false);
     }
   };
 
   // Export to Excel (Scoped to current view)
   const handleExportExcel = () => {
     if (filteredPermits.length === 0) {
-      alert('Tidak ada data izin untuk diekspor.');
+      showToast('Tidak ada data izin untuk diekspor pada filter saat ini.', 'warning', 'Ekspor Kosong');
       return;
     }
 
@@ -637,9 +708,10 @@ export default function PermitApprovalPortal() {
     );
   }
 
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans text-slate-800">
+  return (
+    <>
+      {!session ? (
+        <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans text-slate-800">
         {/* Navigation Bar */}
         <header className="px-6 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -670,218 +742,58 @@ export default function PermitApprovalPortal() {
         <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
           <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Gate Header Banner */}
-            <div className="p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white text-center relative overflow-hidden">
-              <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-xs text-emerald-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
-                <ShieldCheck className="w-7 h-7" />
+            <div className="p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white text-center relative overflow-hidden">
+              <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-xs text-blue-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
+                <Lock className="w-7 h-7" />
               </div>
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Otorisasi Persetujuan Izin
+                Akses Terproteksi
               </h2>
+              <p className="text-slate-300 text-xs mt-1">
+                Portal Persetujuan Izin &amp; Dinas Luar Pegawai
+              </p>
             </div>
 
-            {/* Role Switcher Tabs */}
-            <div className="flex border-b border-slate-200 bg-slate-50/70 p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('atasan');
-                  setAtasanLoginError('');
-                }}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                  activeTab === 'atasan'
-                    ? 'bg-white text-emerald-700 shadow-xs border border-slate-200/80'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-slate-700 leading-relaxed space-y-2.5">
+                <p className="font-bold text-blue-900 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  <span>Satu Pintu Login SIAP</span>
+                </p>
+                <p>
+                  Halaman verifikasi dan persetujuan izin ini hanya dapat diakses oleh <strong>Pejabat Atasan Langsung</strong> dan <strong>Administrator</strong> yang telah terautentikasi melalui <em>Satu Pintu Login</em>.
+                </p>
+                <p className="text-slate-500 text-[11px]">
+                  Masukkan Email &amp; Password Administrator, atau 18 digit NIP &amp; 6 digit PIN Atasan Anda pada portal login resmi.
+                </p>
+              </div>
+
+              <Link
+                href="/admin/login"
+                className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
-                <UserCheck className="w-4 h-4" />
-                <span>Masuk sebagai Atasan</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('admin');
-                  setAdminLoginError('');
-                }}
-                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                  activeTab === 'admin'
-                    ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Masuk sebagai Admin</span>
-              </button>
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                <span>Masuk Melalui Satu Pintu Login</span>
+              </Link>
+
+              <div className="pt-2 text-center border-t border-slate-100">
+                <Link
+                  href="/"
+                  className="text-xs text-slate-500 hover:text-blue-600 font-medium inline-flex items-center gap-1 transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Kembali ke Halaman Presensi Publik</span>
+                </Link>
+              </div>
             </div>
-
-            {/* TAB CONTENT 1: ATASAN LOGIN */}
-            {activeTab === 'atasan' && (
-              <form onSubmit={handleAtasanLogin} className="p-6 space-y-4">
-                {atasanLoginError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
-                    <span>{atasanLoginError}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Pilih Pejabat / Atasan Langsung
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedAtasanNip}
-                      onChange={(e) => {
-                        setSelectedAtasanNip(e.target.value);
-                        setAtasanLoginError('');
-                      }}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all font-medium text-slate-800"
-                      required
-                    >
-                      <option value="">-- Pilih Nama Pejabat / Bagian --</option>
-                      {atasanList.map((sup) => (
-                        <option key={sup.nip} value={sup.nip}>
-                          {sup.nama} — {sup.jabatan} ({sup.unit_kerja})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    PIN Otorisasi Atasan
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="password"
-                      value={atasanPinInput}
-                      onChange={(e) => {
-                        setAtasanPinInput(e.target.value);
-                        setAtasanLoginError('');
-                      }}
-                      placeholder="Masukkan PIN Anda"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all font-medium"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={atasanLoginLoading}
-                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {atasanLoginLoading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Memverifikasi Otoritas...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserCheck className="w-4 h-4" />
-                      <span>Buka Panel Persetujuan Atasan</span>
-                    </>
-                  )}
-                </button>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Nama pejabat atau PIN belum sesuai?</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleOpenNewAtasan();
-                      setShowManageAtasanModal(true);
-                    }}
-                    className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Settings className="w-3 h-3" />
-                    <span>Kelola Pejabat &amp; PIN</span>
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* TAB CONTENT 2: ADMIN LOGIN */}
-            {activeTab === 'admin' && (
-              <form onSubmit={handleAdminLogin} className="p-6 space-y-4">
-                {adminLoginError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
-                    <span>{adminLoginError}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Email Administrator
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="email"
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      placeholder="masukkan e-mail"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    Kata Sandi (Password)
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <input
-                      type="password"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      placeholder="Masukkan kata sandi"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-medium"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={adminLoginLoading}
-                  className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 active:bg-black text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {adminLoginLoading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Mengautentikasi...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Masuk sebagai Administrator</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
           </div>
         </main>
       </div>
-    );
-  }
-
-  // =========================================================================
-  // VIEW B: ACTIVE APPROVAL PORTAL (Authenticated as Atasan or Admin)
-  // =========================================================================
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
+    ) : (
+      /* =========================================================================
+         VIEW B: ACTIVE APPROVAL PORTAL (Authenticated as Atasan or Admin)
+         ========================================================================= */
+      <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       {/* Top Header Bar */}
       <header className="bg-slate-900 text-white sticky top-0 z-20 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -1346,6 +1258,7 @@ export default function PermitApprovalPortal() {
                                 setPreviewAttachmentTitle(
                                   `Lampiran Dokumen: ${item.nama} (${typeConfig.label})`
                                 );
+                                setPreviewAttachmentFileName(item.lampiran_nama || 'Berkas_Lampiran');
                               }}
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors font-semibold text-[11px] cursor-pointer"
                               title="Buka lampiran SPT / SKD"
@@ -1431,11 +1344,11 @@ export default function PermitApprovalPortal() {
                             {session.role === 'admin' && (
                               <button
                                 type="button"
-                                onClick={() => handleDeletePermit(item.id)}
+                                onClick={() => confirmDeletePermit(item)}
                                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                                 title="Hapus permohonan (Khusus Admin)"
                               >
-                                <X className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -1449,15 +1362,17 @@ export default function PermitApprovalPortal() {
           )}
         </div>
       </main>
+    </div>
+  )}
 
       {/* =========================================================================
           MODAL: REVIEW & APPROVAL ACTION
          ========================================================================= */}
       {selectedPermit && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-100 overflow-hidden my-8">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-100 overflow-hidden my-auto flex flex-col max-h-[92vh]">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
                   <UserCheck className="w-4 h-4" />
@@ -1578,6 +1493,9 @@ export default function PermitApprovalPortal() {
                         setPreviewAttachmentTitle(
                           `Dokumen SPT/Lampiran: ${selectedPermit.nama}`
                         );
+                        setPreviewAttachmentFileName(
+                          selectedPermit.lampiran_nama || 'Dokumen_Lampiran'
+                        );
                       }}
                       className="text-blue-600 hover:underline font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
                     >
@@ -1594,6 +1512,9 @@ export default function PermitApprovalPortal() {
                         setPreviewAttachmentTitle(
                           `Dokumen SPT/Lampiran: ${selectedPermit.nama}`
                         );
+                        setPreviewAttachmentFileName(
+                          selectedPermit.lampiran_nama || 'Dokumen_Lampiran'
+                        );
                       }}
                       className="cursor-pointer max-h-48 overflow-hidden rounded-lg border border-slate-200 relative group"
                     >
@@ -1608,17 +1529,24 @@ export default function PermitApprovalPortal() {
                       </div>
                     </div>
                   ) : (
-                    <a
-                      href={selectedPermit.lampiran_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-blue-50 transition-colors text-blue-600 font-semibold"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAttachmentUrl(selectedPermit.lampiran_url || null);
+                        setPreviewAttachmentTitle(
+                          `Dokumen SPT/Lampiran: ${selectedPermit.nama}`
+                        );
+                        setPreviewAttachmentFileName(
+                          selectedPermit.lampiran_nama || 'Dokumen_Lampiran.pdf'
+                        );
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-blue-50 transition-colors text-blue-600 font-semibold cursor-pointer"
                     >
                       <span className="truncate">
-                        {selectedPermit.lampiran_nama || 'Unduh Berkas Lampiran'}
+                        {selectedPermit.lampiran_nama || 'Buka Berkas Lampiran (PDF)'}
                       </span>
-                      <ExternalLink className="w-4 h-4 shrink-0" />
-                    </a>
+                      <Eye className="w-4 h-4 shrink-0" />
+                    </button>
                   )}
                 </div>
               )}
@@ -1631,7 +1559,7 @@ export default function PermitApprovalPortal() {
                     Disposisi / Catatan Verifikasi
                   </span>
                   <span className="text-[10px] text-slate-500 font-medium">
-                    Akan dicatat atas nama: <strong>{session.nama}</strong> ({session.role === 'admin' ? 'Admin' : 'Atasan'})
+                    Akan dicatat atas nama: <strong>{session?.nama || 'Verifikator'}</strong> ({session?.role === 'admin' ? 'Admin' : 'Atasan'})
                   </span>
                 </div>
 
@@ -1694,13 +1622,28 @@ export default function PermitApprovalPortal() {
 
               {/* Action Buttons */}
               <div className="pt-2 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedPermit(null)}
-                  className="w-full sm:w-auto px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold cursor-pointer"
-                >
-                  Tutup
-                </button>
+                <div className="w-full sm:w-auto flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPermit(null)}
+                    className="w-full sm:w-auto px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+
+                  {session?.role === 'admin' && (
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => confirmDeletePermit(selectedPermit)}
+                      className="w-full sm:w-auto px-3 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
+                      title="Hapus berkas permohonan ini secara permanen"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus Arsip</span>
+                    </button>
+                  )}
+                </div>
 
                 <div className="w-full sm:w-auto flex items-center gap-2">
                   <button
@@ -1734,44 +1677,15 @@ export default function PermitApprovalPortal() {
       )}
 
       {/* =========================================================================
-          MODAL: LIGHTBOX FULL ATTACHMENT PREVIEW
+          MODAL: FULL DOCUMENT ATTACHMENT PREVIEW (PDF & IMAGE SAFE VIEWER)
          ========================================================================= */}
-      {previewAttachmentUrl && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="px-5 py-3.5 bg-slate-950 border-b border-slate-800 text-white flex items-center justify-between">
-              <span className="font-bold text-xs truncate">
-                {previewAttachmentTitle}
-              </span>
-              <div className="flex items-center gap-2">
-                <a
-                  href={previewAttachmentUrl}
-                  download="Lampiran_Izin.png"
-                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Unduh</span>
-                </a>
-                <button
-                  onClick={() => setPreviewAttachmentUrl(null)}
-                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-black/40">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewAttachmentUrl}
-                alt="Pratinjau Dokumen Lampiran"
-                className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-lg"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <DocumentViewerModal
+        isOpen={!!previewAttachmentUrl}
+        onClose={() => setPreviewAttachmentUrl(null)}
+        documentUrl={previewAttachmentUrl}
+        documentTitle={previewAttachmentTitle}
+        fileName={previewAttachmentFileName}
+      />
 
       {/* =========================================================================
           MODAL: KELOLA DAFTAR PEJABAT / ATASAN LANGSUNG & PIN
@@ -2033,7 +1947,7 @@ export default function PermitApprovalPortal() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteAtasan(atasan.nip, atasan.nama)}
+                                  onClick={() => handleDeleteAtasan(atasan)}
                                   className="p-1 rounded hover:bg-rose-50 text-rose-600 cursor-pointer"
                                   title="Hapus pejabat"
                                 >
@@ -2065,6 +1979,148 @@ export default function PermitApprovalPortal() {
           </div>
         </div>
       )}
-    </div>
+
+      {/* =========================================================================
+          MODAL: KONFIRMASI HAPUS (DELETE CONFIRMATION MODAL)
+         ========================================================================= */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden my-auto max-h-[92vh] flex flex-col transform transition-all">
+            {/* Header */}
+            <div className="p-5 bg-gradient-to-b from-rose-50/80 to-white border-b border-rose-100 flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                  {deleteTarget.title}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {deleteTarget.subtitle}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteExecuting}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Details List */}
+            {deleteTarget.extraDetails && deleteTarget.extraDetails.length > 0 && (
+              <div className="p-5 py-4 bg-slate-50 border-b border-slate-200/80 space-y-2 text-xs">
+                {deleteTarget.extraDetails.map((detail, idx) => (
+                  <div key={idx} className="flex justify-between items-start gap-2">
+                    <span className="text-slate-500 font-medium shrink-0">{detail.label}:</span>
+                    <span className="text-slate-800 font-semibold text-right break-words">{detail.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Warning Note */}
+            <div className="px-5 py-3 bg-amber-50/70 border-b border-amber-100 text-[11px] text-amber-800 flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+              <span>Tindakan ini permanen dan data yang dihapus tidak dapat dipulihkan kembali.</span>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="p-4 bg-white flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteExecuting}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Batalkan
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={deleteExecuting}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {deleteExecuting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Ya, Hapus Permanen</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          TOAST NOTIFICATION CONTAINER (Floating top-right)
+         ========================================================================= */}
+      <div className="fixed top-4 right-4 z-[70] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-3 sm:px-0">
+        {toasts.map((toast) => {
+          const isSuccess = toast.type === 'success';
+          const isError = toast.type === 'error';
+          const isWarning = toast.type === 'warning';
+
+          return (
+            <div
+              key={toast.id}
+              className={`pointer-events-auto rounded-xl shadow-lg border p-3.5 flex items-start gap-3 transition-all animate-in slide-in-from-top-2 duration-200 ${
+                isSuccess
+                  ? 'bg-white border-emerald-200 text-slate-800 shadow-emerald-500/10'
+                  : isError
+                  ? 'bg-white border-rose-200 text-slate-800 shadow-rose-500/10'
+                  : isWarning
+                  ? 'bg-white border-amber-200 text-slate-800 shadow-amber-500/10'
+                  : 'bg-white border-blue-200 text-slate-800 shadow-blue-500/10'
+              }`}
+            >
+              <div
+                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  isSuccess
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : isError
+                    ? 'bg-rose-100 text-rose-600'
+                    : isWarning
+                    ? 'bg-amber-100 text-amber-600'
+                    : 'bg-blue-100 text-blue-600'
+                }`}
+              >
+                {isSuccess && <CheckCircle2 className="w-4 h-4" />}
+                {isError && <AlertCircle className="w-4 h-4" />}
+                {isWarning && <AlertTriangle className="w-4 h-4" />}
+                {toast.type === 'info' && <Info className="w-4 h-4" />}
+              </div>
+
+              <div className="flex-1 min-w-0 pt-0.5">
+                {toast.title && (
+                  <p className="text-xs font-bold text-slate-900 leading-tight mb-0.5">
+                    {toast.title}
+                  </p>
+                )}
+                <p className="text-xs text-slate-600 leading-relaxed break-words">
+                  {toast.message}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => removeToast(toast.id)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors shrink-0 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

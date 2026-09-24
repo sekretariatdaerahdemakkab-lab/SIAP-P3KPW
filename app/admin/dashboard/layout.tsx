@@ -124,6 +124,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             Hari Libur &amp; Cuti
           </Link>
+          <Link 
+            href="/admin/dashboard/atasan" 
+            className={`hover:text-blue-600 transition-colors h-full flex items-center border-b-2 whitespace-nowrap ${pathname === '/admin/dashboard/atasan' ? 'text-blue-600 border-blue-600' : 'border-transparent'}`}
+          >
+            Kelola Pejabat &amp; PIN
+          </Link>
         </div>
       </div>
 

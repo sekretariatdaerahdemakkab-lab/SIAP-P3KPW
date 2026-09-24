@@ -421,15 +421,6 @@ function PortalIzinContent() {
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/persetujuan-izin"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 rounded-lg transition-colors"
-              title="Panel persetujuan untuk Atasan & Admin"
-            >
-              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline">Persetujuan Atasan/Admin</span>
-              <span className="sm:hidden">Approve</span>
-            </Link>
-            <Link
               href="/"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
@@ -1004,11 +995,11 @@ function PortalIzinContent() {
         </div>
       </main>
 
-      {/* Modal: Change PIN */}
+      {/* Modal: Change PIN (Scrollable Modal) */}
       {isPinModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-4 px-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full my-auto max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-4 px-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-blue-600" />
                 <h3 className="text-sm font-bold text-slate-800">Ubah PIN Pengaman Pribadi</h3>
@@ -1021,7 +1012,7 @@ function PortalIzinContent() {
               </button>
             </div>
 
-            <form onSubmit={handleChangePin} className="p-5 space-y-3.5">
+            <form onSubmit={handleChangePin} className="p-5 space-y-3.5 overflow-y-auto flex-1 overscroll-contain">
               {pinChangeError && (
                 <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -1093,10 +1084,10 @@ function PortalIzinContent() {
         </div>
       )}
 
-      {/* Modal: Confirm Delete Pending Permit */}
+      {/* Modal: Confirm Delete Pending Permit (Scrollable Modal) */}
       {deleteTargetPermit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-5 space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full my-auto max-h-[90vh] flex flex-col p-5 space-y-4 overflow-y-auto animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
                 <AlertCircle className="w-5 h-5" />

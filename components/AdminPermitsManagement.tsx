@@ -5,6 +5,7 @@ import { collection, query, updateDoc, doc, deleteDoc, onSnapshot } from 'fireba
 import { db, auth } from '@/lib/firebase';
 import { PermitItem, PERMIT_TYPES } from '@/lib/permits';
 import Link from 'next/link';
+import DocumentViewerModal from '@/components/DocumentViewerModal';
 import {
   FileText,
   Search,
@@ -38,6 +39,11 @@ export default function AdminPermitsManagement() {
   const [adminNote, setAdminNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // Document Safe Viewer Modal State
+  const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null);
+  const [docPreviewTitle, setDocPreviewTitle] = useState('');
+  const [docPreviewName, setDocPreviewName] = useState('');
 
   // Real-time synchronization of permits
   useEffect(() => {
@@ -393,15 +399,19 @@ export default function AdminPermitsManagement() {
                           <span className="text-slate-400 italic">-</span>
                         )}
                         {item.lampiran_url && (
-                          <a
-                            href={item.lampiran_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-1 flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 hover:underline font-semibold"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDocPreviewUrl(item.lampiran_url || null);
+                              setDocPreviewTitle(`Lampiran Dokumen: ${item.nama}`);
+                              setDocPreviewName(item.lampiran_nama || 'Berkas_Lampiran');
+                            }}
+                            className="mt-1 flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 hover:underline font-semibold cursor-pointer"
+                            title="Buka lampiran surat / berkas"
                           >
-                            <ExternalLink className="w-3 h-3" />
+                            <Eye className="w-3 h-3" />
                             Lihat Lampiran
-                          </a>
+                          </button>
                         )}
                       </td>
                       <td className="py-3 px-4 text-slate-700 max-w-xs truncate" title={item.keterangan}>
@@ -468,26 +478,26 @@ export default function AdminPermitsManagement() {
         </div>
       </div>
 
-      {/* Modal Review Detail & Persetujuan */}
+      {/* Modal Review Detail & Persetujuan (Scrollable Modal) */}
       {reviewModalPermit && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-slate-100 overflow-hidden my-auto flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <FileText className="w-5 h-5 text-blue-400" />
                 <h4 className="font-bold text-sm">Verifikasi Permohonan Izin / Dinas Luar</h4>
               </div>
               <button
                 onClick={() => setReviewModalPermit(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-md"
+                className="text-slate-400 hover:text-white p-1 rounded-md cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
               {actionSuccess && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 flex items-center gap-2 font-medium">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -585,15 +595,18 @@ export default function AdminPermitsManagement() {
                     <span className="font-semibold text-slate-700 truncate max-w-xs">
                       {reviewModalPermit.lampiran_nama || 'Berkas_Bukti_Surat.pdf'}
                     </span>
-                    <a
-                      href={reviewModalPermit.lampiran_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold inline-flex items-center gap-1 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDocPreviewUrl(reviewModalPermit.lampiran_url || null);
+                        setDocPreviewTitle(`Lampiran Dokumen: ${reviewModalPermit.nama}`);
+                        setDocPreviewName(reviewModalPermit.lampiran_nama || 'Berkas_Bukti_Surat');
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <Eye className="w-3.5 h-3.5" />
                       Buka Dokumen
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}
@@ -623,8 +636,8 @@ export default function AdminPermitsManagement() {
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            {/* Action Buttons (Pinned Footer) */}
+            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => handleDeletePermit(reviewModalPermit.id)}
@@ -658,6 +671,15 @@ export default function AdminPermitsManagement() {
           </div>
         </div>
       )}
+
+      {/* Modal Pratinjau Dokumen Aman (PDF & Gambar) */}
+      <DocumentViewerModal
+        isOpen={!!docPreviewUrl}
+        onClose={() => setDocPreviewUrl(null)}
+        documentUrl={docPreviewUrl}
+        documentTitle={docPreviewTitle}
+        fileName={docPreviewName}
+      />
     </div>
   );
 }

@@ -31,6 +31,21 @@ export interface AtasanUser {
   pin?: string;
 }
 
+/**
+ * Daftar resmi 9 Bagian di lingkungan Sekretariat Daerah Kabupaten Demak
+ */
+export const SETDA_BAGIAN_LIST = [
+  'Bagian Umum',
+  'Bagian Hukum',
+  'Bagian Organisasi',
+  'Bagian Perekonomian & SDA',
+  'Bagian Administrasi Pembangunan',
+  'Bagian Pengadaan Barang & Jasa',
+  'Bagian Pemerintahan',
+  'Bagian Kesejahteraan Rakyat',
+  'Bagian Protokol & Komunikasi Pimpinan'
+] as const;
+
 export const DEFAULT_ATASAN_LIST: AtasanUser[] = [
   {
     nip: '197505121998031002',
@@ -169,3 +184,48 @@ export function checkIsSusulan(startDateISO: string): { isSusulan: boolean; diff
     diffDays: Math.max(0, diffDays)
   };
 }
+
+import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { db } from './firebase';
+
+/**
+ * Ensures all standard Atasan and Pejabat data are physically present in the Firestore database (atasan_users collection).
+ * If the collection is empty, automatically seeds it from DEFAULT_ATASAN_LIST so data is never purely in memory.
+ */
+export async function ensureAtasanInFirestore(): Promise<AtasanUser[]> {
+  try {
+    const snap = await getDocs(collection(db, 'atasan_users'));
+    if (snap.empty) {
+      const batch = writeBatch(db);
+      for (const item of DEFAULT_ATASAN_LIST) {
+        const ref = doc(db, 'atasan_users', item.nip);
+        batch.set(ref, {
+          nip: item.nip,
+          nama: item.nama,
+          jabatan: item.jabatan,
+          unit_kerja: item.unit_kerja,
+          pin: item.pin || '123456',
+          updated_at: new Date().toISOString()
+        });
+      }
+      await batch.commit();
+      return DEFAULT_ATASAN_LIST;
+    } else {
+      const list: AtasanUser[] = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          nip: d.id,
+          nama: data.nama || '',
+          jabatan: data.jabatan || '',
+          unit_kerja: data.unit_kerja || '',
+          pin: data.pin || '123456'
+        };
+      });
+      return list;
+    }
+  } catch (err) {
+    console.warn('Error syncing atasan to firestore:', err);
+    return DEFAULT_ATASAN_LIST;
+  }
+}
+

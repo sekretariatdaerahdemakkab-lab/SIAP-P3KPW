@@ -223,6 +223,38 @@
         }
       },
       "required": ["nip", "pin"]
+    },
+    "AtasanUser": {
+      "title": "AtasanUser",
+      "description": "Supervisor and department head credentials with PIN for permit approval workflow",
+      "type": "object",
+      "properties": {
+        "nip": {
+          "type": "string",
+          "description": "Supervisor NIP identifier"
+        },
+        "nama": {
+          "type": "string",
+          "description": "Supervisor full name"
+        },
+        "jabatan": {
+          "type": "string",
+          "description": "Official title or position"
+        },
+        "unit_kerja": {
+          "type": "string",
+          "description": "Work unit or Bagian in Setda Demak"
+        },
+        "pin": {
+          "type": "string",
+          "description": "Secure 6-digit access PIN"
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["nip", "nama", "jabatan", "unit_kerja"]
     }
   },
   "firestore": {
@@ -241,6 +273,10 @@
     "/employee_auth/{nip}": {
       "schema": "EmployeeAuth",
       "description": "Security credentials and custom access PIN per employee"
+    },
+    "/atasan_users/{atasanId}": {
+      "schema": "AtasanUser",
+      "description": "Department heads and direct supervisors with authentication PIN"
     },
     "/attendances/{attendanceId}": {
       "schema": "Attendance",

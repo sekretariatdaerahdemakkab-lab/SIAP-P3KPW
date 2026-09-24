@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { PermitItem, PERMIT_TYPES } from '@/lib/permits';
+import DocumentViewerModal from '@/components/DocumentViewerModal';
 import {
   Clock,
   CheckCircle2,
@@ -29,6 +30,9 @@ export default function EmployeePermitHistory({
   onOpenForm
 }: EmployeePermitHistoryProps) {
   const [selectedPermit, setSelectedPermit] = useState<PermitItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [previewName, setPreviewName] = useState('');
 
   const getStatusBadge = (status: PermitItem['status']) => {
     switch (status) {
@@ -186,24 +190,24 @@ export default function EmployeePermitHistory({
         )}
       </div>
 
-      {/* Modal Detail & Review Note */}
+      {/* Modal Detail & Review Note (Scrollable Modal) */}
       {selectedPermit && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden my-auto flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <FileText className="w-5 h-5 text-blue-400" />
                 <h4 className="font-bold text-sm">Rincian Pengajuan Izin</h4>
               </div>
               <button
                 onClick={() => setSelectedPermit(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-md"
+                className="text-slate-400 hover:text-white p-1 rounded-md cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs">
+            <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                 <div>
                   <span className="text-slate-500 block">Jenis Permohonan</span>
@@ -277,21 +281,24 @@ export default function EmployeePermitHistory({
                     <span className="font-semibold text-slate-700 truncate max-w-xs">
                       {selectedPermit.lampiran_nama || 'Dokumen_Lampiran.pdf'}
                     </span>
-                    <a
-                      href={selectedPermit.lampiran_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold inline-flex items-center gap-1 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewUrl(selectedPermit.lampiran_url || null);
+                        setPreviewTitle(`Lampiran: ${selectedPermit.nama}`);
+                        setPreviewName(selectedPermit.lampiran_nama || 'Dokumen_Lampiran');
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <Eye className="w-3.5 h-3.5" />
                       Buka Dokumen
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0">
               <button
                 onClick={() => setSelectedPermit(null)}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
@@ -302,6 +309,15 @@ export default function EmployeePermitHistory({
           </div>
         </div>
       )}
+
+      {/* Modal Pratinjau Dokumen Aman (PDF & Gambar) */}
+      <DocumentViewerModal
+        isOpen={!!previewUrl}
+        onClose={() => setPreviewUrl(null)}
+        documentUrl={previewUrl}
+        documentTitle={previewTitle}
+        fileName={previewName}
+      />
     </div>
   );
 }

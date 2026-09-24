@@ -1,6 +1,6 @@
 import EmployeeFilter from '@/components/EmployeeFilter';
 import Link from 'next/link';
-import { ShieldCheck, UserCheck, FileText } from 'lucide-react';
+import { LogIn, FileText } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -24,19 +24,12 @@ export default function Home() {
             <span className="hidden sm:inline">Ajukan Izin</span>
           </Link>
           <Link
-            href="/persetujuan-izin"
-            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5"
-            title="Panel persetujuan izin khusus Atasan & Admin"
-          >
-            <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Approve Izin</span>
-          </Link>
-          <Link
             href="/admin/login"
-            className="px-3.5 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+            title="Satu Pintu Login (Admin & Atasan Langsung)"
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Admin</span>
+            <LogIn className="w-3.5 h-3.5" />
+            <span>Login</span>
           </Link>
         </div>
       </nav>
