@@ -1813,9 +1813,9 @@ export default function PermitApprovalPortal() {
                       <option value="Bagian Umum">Bagian Umum</option>
                       <option value="Bagian Hukum">Bagian Hukum</option>
                       <option value="Bagian Organisasi">Bagian Organisasi</option>
-                      <option value="Bagian Tata Pemerintahan">Bagian Tata Pemerintahan</option>
-                      <option value="Bagian Perekonomian dan Sumber Daya Alam">
-                        Bagian Perekonomian dan Sumber Daya Alam
+                      <option value="Bagian Pemerintahan">Bagian Pemerintahan</option>
+                      <option value="Bagian Perekonomian dan SDA">
+                        Bagian Perekonomian dan SDA
                       </option>
                       <option value="Bagian Pengadaan Barang dan Jasa">
                         Bagian Pengadaan Barang dan Jasa
@@ -1824,8 +1824,8 @@ export default function PermitApprovalPortal() {
                         Bagian Administrasi Pembangunan
                       </option>
                       <option value="Bagian Kesejahteraan Rakyat">Bagian Kesejahteraan Rakyat</option>
-                      <option value="Bagian Protokol dan Komunikasi Pimpinan">
-                        Bagian Protokol dan Komunikasi Pimpinan
+                      <option value="Bagian Prokompim">
+                        Bagian Prokompim
                       </option>
                       <option value="Sekretariat Daerah">Sekretariat Daerah (Umum / Pimpinan)</option>
                     </select>

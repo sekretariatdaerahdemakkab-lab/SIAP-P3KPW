@@ -145,12 +145,12 @@ export default function AdminAtasanManagement() {
       'Bagian Umum',
       'Bagian Hukum',
       'Bagian Organisasi',
-      'Bagian Perekonomian & SDA',
+      'Bagian Perekonomian dan SDA',
       'Bagian Administrasi Pembangunan',
-      'Bagian Pengadaan Barang & Jasa',
+      'Bagian Pengadaan Barang dan Jasa',
       'Bagian Pemerintahan',
       'Bagian Kesejahteraan Rakyat',
-      'Bagian Protokol & Komunikasi Pimpinan'
+      'Bagian Prokompim'
     ].forEach((u) => set.add(u));
 
     return Array.from(set).sort();
