@@ -230,7 +230,7 @@ export default function PermitFormModal({
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Jenis Pengajuan <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {FORM_PERMIT_TYPES.map((t) => {
                     const cfg = PERMIT_TYPES[t];
                     const isSelected = jenis === t;
@@ -341,6 +341,8 @@ export default function PermitFormModal({
                   placeholder={
                     jenis === 'dinas_luar'
                       ? 'Contoh: 090/124/SETDA/2026'
+                      : jenis === 'wfh'
+                      ? 'Contoh: 800/015/WFH/SETDA/2026 (opsional)'
                       : 'Contoh: 440/12/Pusk.Demak/2026'
                   }
                   className="w-full px-3 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden transition-all"
@@ -359,6 +361,8 @@ export default function PermitFormModal({
                   placeholder={
                     jenis === 'dinas_luar'
                       ? 'Contoh: Mengikuti Rapat Koordinasi Penataan Tenaga Non-ASN di BKD Provinsi Jawa Tengah, Semarang'
+                      : jenis === 'wfh'
+                      ? 'Contoh: Melaksanakan tugas kedinasan secara daring/remote dari rumah (WFH) sesuai arahan pimpinan'
                       : jenis === 'sakit'
                       ? 'Contoh: Istirahat rawat jalan demam tinggi sesuai anjuran dokter Puskesmas Demak 1'
                       : 'Contoh: Pengajuan cuti tahunan / bersalin sesuai ketentuan yang berlaku'

@@ -833,6 +833,7 @@ function PortalIzinContent() {
               >
                 <option value="all">Semua Kategori</option>
                 <option value="dinas_luar">Dinas Luar (DL)</option>
+                <option value="wfh">Work From Home (WFH)</option>
                 <option value="sakit">Sakit (S)</option>
                 <option value="cuti">Cuti (C)</option>
               </select>

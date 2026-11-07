@@ -145,8 +145,8 @@
         },
         "jenis": {
           "type": "string",
-          "enum": ["dinas_luar", "sakit", "izin", "cuti"],
-          "description": "Type of permit: dinas_luar, sakit, izin, cuti"
+          "enum": ["dinas_luar", "sakit", "izin", "cuti", "wfh"],
+          "description": "Type of permit: dinas_luar, sakit, izin, cuti, wfh"
         },
         "tanggal_mulai": {
           "type": "string",

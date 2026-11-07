@@ -278,6 +278,7 @@ export default function AdminPermitsManagement() {
           >
             <option value="all">Semua Jenis Izin</option>
             <option value="dinas_luar">Dinas Luar (DL)</option>
+            <option value="wfh">Work From Home (WFH)</option>
             <option value="sakit">Sakit (S)</option>
             <option value="cuti">Cuti (C)</option>
           </select>

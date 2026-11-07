@@ -1083,6 +1083,7 @@ export default function PermitApprovalPortal() {
               >
                 <option value="all">Semua Jenis Izin / Tugas</option>
                 <option value="dinas_luar">Dinas Luar (DL / SPT)</option>
+                <option value="wfh">Work From Home (WFH)</option>
                 <option value="sakit">Izin Sakit (SKD Dokter)</option>
                 <option value="cuti">Cuti Tahunan / Bersalin (C)</option>
                 <option value="izin">Izin Alasan Penting (I)</option>

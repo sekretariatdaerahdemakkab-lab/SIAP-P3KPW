@@ -43,8 +43,9 @@ interface EmployeeRecapRow {
   keterlambatan: number;
   mendahului: number;
   piket: number;
-  izin_sah: number; // Total DL, Sakit, Cuti, Izin sah
+  izin_sah: number; // Total DL, WFH, Sakit, Cuti, Izin sah
   dinas_luar: number;
+  wfh: number;
   sakit: number;
   izin_cuti: number;
   persen_kehadiran: number;
@@ -319,6 +320,7 @@ export default function AttendanceRecapPage() {
           let mendahului = 0;
           let piket = 0;
           let dinasLuar = 0;
+          let wfh = 0;
           let sakit = 0;
           let izinCuti = 0;
 
@@ -359,6 +361,8 @@ export default function AttendanceRecapPage() {
               // Not fingerprinted, but has approved permit on active workday
               if (permit.jenis === 'dinas_luar') {
                 dinasLuar++;
+              } else if (permit.jenis === 'wfh') {
+                wfh++;
               } else if (permit.jenis === 'sakit') {
                 sakit++;
               } else {
@@ -367,8 +371,8 @@ export default function AttendanceRecapPage() {
             }
           });
 
-          const totalIzinSah = dinasLuar + sakit + izinCuti;
-          // Kehadiran efektif = hadir fisik + dinas luar + sakit sah + izin sah
+          const totalIzinSah = dinasLuar + wfh + sakit + izinCuti;
+          // Kehadiran efektif = hadir fisik + dinas luar + WFH + sakit sah + izin sah
           const totalAkuntabilitas = kehadiran + totalIzinSah;
           const persen = effectiveWorkingDays > 0
             ? Math.min(100, Math.round((totalAkuntabilitas / effectiveWorkingDays) * 100))
@@ -389,6 +393,7 @@ export default function AttendanceRecapPage() {
             piket,
             izin_sah: totalIzinSah,
             dinas_luar: dinasLuar,
+            wfh,
             sakit,
             izin_cuti: izinCuti,
             persen_kehadiran: persen
@@ -477,6 +482,7 @@ export default function AttendanceRecapPage() {
     const totalTidakLengkap = filteredData.reduce((acc, curr) => acc + curr.tidak_lengkap, 0);
     const totalIzinSah = filteredData.reduce((acc, curr) => acc + curr.izin_sah, 0);
     const totalDL = filteredData.reduce((acc, curr) => acc + curr.dinas_luar, 0);
+    const totalWFH = filteredData.reduce((acc, curr) => acc + (curr.wfh || 0), 0);
     const totalSakit = filteredData.reduce((acc, curr) => acc + curr.sakit, 0);
     const totalIzinCuti = filteredData.reduce((acc, curr) => acc + curr.izin_cuti, 0);
     const totalTerlambat = filteredData.reduce((acc, curr) => acc + curr.keterlambatan, 0);
@@ -492,6 +498,7 @@ export default function AttendanceRecapPage() {
       totalTidakLengkap,
       totalIzinSah,
       totalDL,
+      totalWFH,
       totalSakit,
       totalIzinCuti,
       totalTerlambat,
@@ -537,6 +544,7 @@ export default function AttendanceRecapPage() {
       'KEHADIRAN FISIK',
       'KEHADIRAN TIDAK LENGKAP',
       'DINAS LUAR (DL)',
+      'WORK FROM HOME (WFH)',
       'SAKIT (S)',
       'IZIN/CUTI',
       'TOTAL SAH',
@@ -558,6 +566,7 @@ export default function AttendanceRecapPage() {
         row.kehadiran,
         row.tidak_lengkap,
         row.dinas_luar,
+        row.wfh || 0,
         row.sakit,
         row.izin_cuti,
         row.kehadiran + row.izin_sah,
@@ -580,6 +589,7 @@ export default function AttendanceRecapPage() {
       stats.totalKehadiran,
       stats.totalTidakLengkap,
       stats.totalDL,
+      stats.totalWFH,
       stats.totalSakit,
       stats.totalIzinCuti,
       stats.totalKehadiran + stats.totalIzinSah,
@@ -602,6 +612,7 @@ export default function AttendanceRecapPage() {
       { wch: 16 }, // KEHADIRAN FISIK
       { wch: 24 }, // KEHADIRAN TIDAK LENGKAP
       { wch: 16 }, // DINAS LUAR (DL)
+      { wch: 22 }, // WORK FROM HOME (WFH)
       { wch: 12 }, // SAKIT (S)
       { wch: 12 }, // IZIN/CUTI
       { wch: 14 }, // TOTAL SAH
@@ -1235,7 +1246,7 @@ export default function AttendanceRecapPage() {
                         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                           <span>{row.izin_sah} hr</span>
                           <span className="text-[10px] text-indigo-500 font-normal">
-                            ({row.dinas_luar > 0 ? `DL:${row.dinas_luar} ` : ''}{row.sakit > 0 ? `S:${row.sakit} ` : ''}{row.izin_cuti > 0 ? `I:${row.izin_cuti}` : ''})
+                            ({row.dinas_luar > 0 ? `DL:${row.dinas_luar} ` : ''}{row.wfh > 0 ? `WFH:${row.wfh} ` : ''}{row.sakit > 0 ? `S:${row.sakit} ` : ''}{row.izin_cuti > 0 ? `I:${row.izin_cuti}` : ''})
                           </span>
                         </div>
                       ) : (

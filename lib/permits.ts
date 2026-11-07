@@ -3,7 +3,7 @@ export interface PermitItem {
   nip: string;
   nama: string;
   unit_kerja?: string;
-  jenis: 'dinas_luar' | 'sakit' | 'izin' | 'cuti';
+  jenis: 'dinas_luar' | 'sakit' | 'izin' | 'cuti' | 'wfh';
   tanggal_mulai: string; // YYYY-MM-DD
   tanggal_selesai: string; // YYYY-MM-DD
   jumlah_hari: number;
@@ -144,13 +144,21 @@ export const PERMIT_TYPES = {
     description: 'Cuti tahunan / bersalin yang disetujui',
     letterLabel: 'Nomor Surat Keputusan / Pengajuan Cuti',
     fileLabel: 'Unggah Berkas Formulir Cuti'
+  },
+  wfh: {
+    label: 'Work From Home (WFH)',
+    badgeClass: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    shortCode: 'WFH',
+    description: 'Pelaksanaan tugas kedinasan dari rumah (Work From Home) sesuai penugasan/persetujuan atasan',
+    letterLabel: 'Nomor Surat Tugas / Jadwal WFH (opsional)',
+    fileLabel: 'Unggah Bukti / Jadwal Surat WFH (opsional)'
   }
 } as const;
 
 /**
  * Daftar jenis izin resmi yang berlaku pada formulir pengajuan
  */
-export const FORM_PERMIT_TYPES = ['dinas_luar', 'sakit', 'cuti'] as const;
+export const FORM_PERMIT_TYPES = ['dinas_luar', 'sakit', 'cuti', 'wfh'] as const;
 export type FormPermitType = typeof FORM_PERMIT_TYPES[number];
 
 /**

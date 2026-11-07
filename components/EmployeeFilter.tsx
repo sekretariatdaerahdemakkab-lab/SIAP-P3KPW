@@ -664,6 +664,7 @@ export default function EmployeeFilter() {
   const totalDutyWeekendCount = calendarRows.filter(r => r.hasDutyAttendance).length;
   const totalPermitDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && !!r.permit).length;
   const totalDLDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && r.permit?.jenis === 'dinas_luar').length;
+  const totalWFHDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && r.permit?.jenis === 'wfh').length;
   const totalSakitDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && r.permit?.jenis === 'sakit').length;
   const totalIzinDays = calendarRows.filter(r => !r.isWeekend && !r.holiday && (r.permit?.jenis === 'izin' || r.permit?.jenis === 'cuti')).length;
   const totalJamKerja = calendarRows.reduce((sum, r) => sum + (r.totalJam || 0), 0).toFixed(2);
@@ -1183,9 +1184,9 @@ export default function EmployeeFilter() {
             </div>
 
             <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-              <p className="text-[10px] uppercase font-bold text-slate-400">Izin / DL / Sakit</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400">Izin / DL / WFH / Sakit</p>
               <p className="text-xl font-bold text-indigo-700 mt-1">{totalPermitDays} <span className="text-xs font-normal text-slate-400">Hari</span></p>
-              <p className="text-[10px] text-indigo-600 font-medium">{totalDLDays} DL • {totalSakitDays} S • {totalIzinDays} I</p>
+              <p className="text-[10px] text-indigo-600 font-medium">{totalDLDays} DL • {totalWFHDays} WFH • {totalSakitDays} S • {totalIzinDays} C/I</p>
             </div>
 
             <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
@@ -1453,6 +1454,8 @@ export default function EmployeeFilter() {
                                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                   row.permit.jenis === 'dinas_luar'
                                     ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                    : row.permit.jenis === 'wfh'
+                                    ? 'bg-cyan-100 text-cyan-800 border border-cyan-300'
                                     : row.permit.jenis === 'sakit'
                                     ? 'bg-amber-100 text-amber-800 border border-amber-300'
                                     : 'bg-indigo-100 text-indigo-800 border border-indigo-300'
