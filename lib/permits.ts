@@ -70,9 +70,9 @@ export const DEFAULT_ATASAN_LIST: AtasanUser[] = [
   },
   {
     nip: '197609142000031001',
-    nama: 'Kepala Bagian Perekonomian & SDA',
-    jabatan: 'Kepala Bagian Perekonomian & SDA',
-    unit_kerja: 'Bagian Perekonomian & SDA',
+    nama: 'Kepala Bagian Perekonomian dan SDA',
+    jabatan: 'Kepala Bagian Perekonomian dan SDA',
+    unit_kerja: 'Bagian Perekonomian dan SDA',
     pin: '123456'
   },
   {
@@ -84,9 +84,9 @@ export const DEFAULT_ATASAN_LIST: AtasanUser[] = [
   },
   {
     nip: '198111052006041005',
-    nama: 'Kepala Bagian Pengadaan Barang & Jasa',
-    jabatan: 'Kepala Bagian Pengadaan Barang & Jasa',
-    unit_kerja: 'Bagian Pengadaan Barang & Jasa',
+    nama: 'Kepala Bagian Pengadaan Barang dan Jasa',
+    jabatan: 'Kepala Bagian Pengadaan Barang dan Jasa',
+    unit_kerja: 'Bagian Pengadaan Barang dan Jasa',
     pin: '123456'
   },
   {
@@ -105,9 +105,9 @@ export const DEFAULT_ATASAN_LIST: AtasanUser[] = [
   },
   {
     nip: '198307222008011006',
-    nama: 'Kepala Bagian Protokol & Komunikasi Pimpinan',
-    jabatan: 'Kepala Bagian Protokol & Komunikasi Pimpinan',
-    unit_kerja: 'Bagian Protokol & Komunikasi Pimpinan',
+    nama: 'Kepala Bagian Prokompim',
+    jabatan: 'Kepala Bagian Prokompim',
+    unit_kerja: 'Bagian Prokompim',
     pin: '123456'
   }
 ];

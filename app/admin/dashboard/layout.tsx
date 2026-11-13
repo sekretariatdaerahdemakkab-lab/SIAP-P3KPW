@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { ShieldCheck, LogOut, Bell, FileText } from 'lucide-react';
+import { ShieldCheck, LogOut, Bell } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -21,6 +21,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       } else {
         setUserEmail(user.email);
         setLoading(false);
+        // Ensure administrator metadata document exists in Firestore
+        setDoc(
+          doc(db, 'admins', user.uid),
+          {
+            email: user.email || '',
+            role: 'admin',
+            created_at: new Date().toISOString()
+          },
+          { merge: true }
+        ).catch((err) => {
+          console.warn('Gagal menyinkronkan metadata admin:', err);
+        });
       }
     });
 
@@ -129,6 +141,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className={`hover:text-blue-600 transition-colors h-full flex items-center border-b-2 whitespace-nowrap ${pathname === '/admin/dashboard/atasan' ? 'text-blue-600 border-blue-600' : 'border-transparent'}`}
           >
             Kelola Pejabat &amp; PIN
+          </Link>
+          <Link 
+            href="/admin/dashboard/database" 
+            className={`hover:text-blue-600 transition-colors h-full flex items-center border-b-2 whitespace-nowrap ${pathname === '/admin/dashboard/database' ? 'text-blue-600 border-blue-600' : 'border-transparent'}`}
+          >
+            Struktur Database
           </Link>
         </div>
       </div>

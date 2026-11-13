@@ -36,7 +36,11 @@
         },
         "jam_pulang": {
           "type": "string",
-          "description": "Standard check-out time HH:mm of active schedule"
+          "description": "Standard check-out time HH:mm of active schedule (Mon-Thu)"
+        },
+        "jam_pulang_jumat": {
+          "type": "string",
+          "description": "Friday check-out time HH:mm of active schedule"
         },
         "toleransi_menit": {
           "type": "number",
@@ -45,6 +49,10 @@
         "schedules": {
           "type": "array",
           "description": "List of available work schedule profiles"
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
         }
       },
       "required": ["jam_masuk", "jam_pulang", "toleransi_menit"]
@@ -54,6 +62,10 @@
       "description": "Master data for PPPK Paruh Waktu employees",
       "type": "object",
       "properties": {
+        "nip": {
+          "type": "string",
+          "description": "Employee NIP identifier"
+        },
         "nama": {
           "type": "string",
           "description": "Full name of employee"
@@ -97,6 +109,10 @@
         "total_jam": {
           "type": "number",
           "description": "Total effective work hours"
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "ISO timestamp of import or update"
         }
       },
       "required": ["nip", "tanggal"]
@@ -122,13 +138,17 @@
         "keterangan": {
           "type": "string",
           "description": "Additional note or government decree"
+        },
+        "updated_at": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
         }
       },
       "required": ["tanggal", "nama", "jenis"]
     },
     "Permit": {
       "title": "Permit",
-      "description": "Leave, official duty outside (dinas luar), sick note, or permission requests submitted by employees and approved by admin",
+      "description": "Leave, official duty outside (dinas luar), WFH, sick note, or permission requests submitted by employees and approved by supervisor/admin",
       "type": "object",
       "properties": {
         "nip": {
@@ -180,6 +200,10 @@
           "type": "boolean",
           "description": "Flag indicating if permit was submitted retroactively"
         },
+        "selisih_hari_susulan": {
+          "type": "number",
+          "description": "Number of retroactive days past start date"
+        },
         "status": {
           "type": "string",
           "enum": ["pending", "approved", "rejected"],
@@ -187,11 +211,24 @@
         },
         "catatan_admin": {
           "type": "string",
-          "description": "Admin review notes or rejection reason"
+          "description": "Admin or supervisor review notes"
         },
         "approved_by": {
           "type": "string",
-          "description": "Email of admin who approved or rejected"
+          "description": "Name/email of reviewer who approved or rejected"
+        },
+        "approved_by_role": {
+          "type": "string",
+          "enum": ["admin", "atasan"],
+          "description": "Role of reviewer"
+        },
+        "approved_by_nip": {
+          "type": "string",
+          "description": "NIP of approving supervisor"
+        },
+        "approved_by_jabatan": {
+          "type": "string",
+          "description": "Official title of approving supervisor"
         },
         "approved_at": {
           "type": "string",
